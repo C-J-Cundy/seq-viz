@@ -27,7 +27,7 @@ def validate_training_entry(entry: Dict[str, Any], schema: Dict[str, Any]) -> Tu
         return False, str(e)
 
 
-def validate_jsonl_file(file_path: str, schema_path: str = "training_data_schema.json") -> None:
+def validate_jsonl_file(file_path: str, schema_path: str = None) -> None:
     """Validate all entries in a JSONL file against the schema."""
     schema = load_schema(schema_path)
     

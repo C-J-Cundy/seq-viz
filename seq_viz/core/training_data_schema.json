@@ -57,6 +57,8 @@
                 },
                 "top_k": {
                   "type": "array",
+                  "minItems": 5,
+                  "maxItems": 5,
                   "items": {
                     "type": "object",
                     "required": ["token_id", "token_str", "prob"],
@@ -79,6 +81,8 @@
                 },
                 "top_20": {
                   "type": "array",
+                  "minItems": 20,
+                  "maxItems": 20,
                   "items": {
                     "type": "object",
                     "required": ["token_id", "token_str", "prob"],
