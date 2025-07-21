@@ -10,6 +10,32 @@ const perplexityElement = document.getElementById('perplexity-value');
 const stepElement = document.getElementById('step-value');
 const sequencesContainer = document.getElementById('sequences-container');
 
+// Create floating particles
+function createParticles() {
+    const particlesContainer = document.getElementById('particles');
+    const colors = ['cyan', 'magenta', 'green'];
+    
+    // Create 30 particles
+    for (let i = 0; i < 30; i++) {
+        const particle = document.createElement('div');
+        particle.className = `particle ${colors[Math.floor(Math.random() * colors.length)]}`;
+        
+        // Random horizontal position
+        particle.style.left = Math.random() * 100 + '%';
+        
+        // Random animation delay
+        particle.style.animationDelay = Math.random() * 15 + 's';
+        
+        // Random animation duration (12-18s)
+        particle.style.animationDuration = (12 + Math.random() * 6) + 's';
+        
+        particlesContainer.appendChild(particle);
+    }
+}
+
+// Initialize particles on load
+window.addEventListener('DOMContentLoaded', createParticles);
+
 // State
 let currentData = null;
 let selectedSequence = 0;
@@ -24,6 +50,11 @@ const history = {
 
 // Connect to WebSocket server
 function connectWebSocket() {
+    // Don't create a new connection if one already exists
+    if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) {
+        return;
+    }
+    
     // Use relative WebSocket URL - defaults to same host as page
     const wsUrl = window.location.hostname === 'file' || window.location.protocol === 'file:' 
         ? 'ws://localhost:8765' 
@@ -82,6 +113,10 @@ function createMiniChart(predictions, targetTokenId) {
     
     // Get top 20 predictions
     const top20 = predictions.top_20 || predictions.top_k || [];
+    // Debug: log only if we're getting unexpected data
+    if (predictions.top_20 && predictions.top_20.length !== 20) {
+        console.warn('Unexpected top_20 length:', predictions.top_20.length, 'at position', predictions.position);
+    }
     if (top20.length === 0) return chart;
     
     // Find max probability for scaling
@@ -155,6 +190,20 @@ function createTokenColumn(token, predictions, position, isSelected) {
     if (isSelected) {
         tokenEl.classList.add('selected');
     }
+    
+    // Check if this token was predicted with high probability
+    // Look at the previous position's predictions
+    if (position > 0 && currentData && currentData.sequences[selectedSequence]) {
+        const prevPredictions = currentData.sequences[selectedSequence].predictions[position - 1];
+        if (prevPredictions && prevPredictions.top_k[0]) {
+            const topPrediction = prevPredictions.top_k[0];
+            // If this token was the top prediction with > 50% probability, mark it as high-prob
+            if (topPrediction.token_str === token && topPrediction.prob > 0.5) {
+                tokenEl.classList.add('high-prob');
+            }
+        }
+    }
+    
     tokenEl.textContent = token;
     
     // Scale font size based on token length
@@ -176,19 +225,23 @@ function createTokenColumn(token, predictions, position, isSelected) {
     predsContainer.className = 'predictions-container';
     
     if (predictions) {
-        // Entropy display
+        // Entropy display with mini chart
         const entropyBox = document.createElement('div');
         entropyBox.className = 'entropy-box';
-        entropyBox.style.display = 'flex';
-        entropyBox.style.justifyContent = 'center';
-        entropyBox.style.alignItems = 'center';
-        entropyBox.style.paddingBottom = '24px'; // Make room for mini chart
+        entropyBox.style.position = 'relative';
+        entropyBox.style.paddingTop = '20px'; // Space for entropy value
         
-        const entropyValue = document.createElement('span');
+        const entropyValue = document.createElement('div');
+        entropyValue.style.position = 'absolute';
+        entropyValue.style.top = '4px';
+        entropyValue.style.left = '0';
+        entropyValue.style.right = '0';
+        entropyValue.style.textAlign = 'center';
         entropyValue.style.fontSize = '1em';
         entropyValue.style.fontWeight = '600';
-        entropyValue.style.color = '#a78bfa';
-        entropyValue.style.fontFamily = 'JetBrains Mono, monospace';
+        entropyValue.style.color = '#FF0080';
+        entropyValue.style.fontFamily = 'Share Tech Mono, monospace';
+        entropyValue.style.textShadow = '0 0 5px rgba(255, 0, 128, 0.5)';
         entropyValue.textContent = predictions.entropy.toFixed(3);
         
         entropyBox.appendChild(entropyValue);
@@ -204,6 +257,19 @@ function createTokenColumn(token, predictions, position, isSelected) {
             // Check if this is the ground truth
             if (pred.token_id === predictions.target_token_id) {
                 item.classList.add('ground-truth');
+            }
+            
+            // Add data stream effect for high probability predictions
+            if (pred.prob > 0.7 && idx === 0) {
+                const stream = document.createElement('div');
+                stream.className = 'data-stream';
+                stream.style.position = 'absolute';
+                stream.style.left = '10px';
+                stream.style.top = '100%';
+                stream.style.animationDelay = Math.random() * 2 + 's';
+                item.appendChild(stream);
+                item.style.position = 'relative';
+                item.style.overflow = 'visible';
             }
             
             // Background bar
@@ -264,7 +330,7 @@ function updateSequenceDisplay() {
     
     const title = document.createElement('div');
     title.className = 'sequence-title';
-    title.textContent = `Sequence ${selectedSequence + 1} of ${currentData.sequences.length}`;
+    title.textContent = `${selectedSequence + 1}/${currentData.sequences.length}`;
     header.appendChild(title);
     
     // Sequence controls
@@ -321,7 +387,7 @@ function updateDashboard(data) {
         if (history.loss.length > history.maxPoints) {
             history.loss.shift();
         }
-        updateGraph('loss-graph', history.loss, '#ef4444');
+        updateGraph('loss-graph', history.loss, '#FF0080');
     }
     
     if (data.perplexity !== undefined) {
@@ -330,7 +396,7 @@ function updateDashboard(data) {
         if (history.perplexity.length > history.maxPoints) {
             history.perplexity.shift();
         }
-        updateGraph('perplexity-graph', history.perplexity, '#22c55e');
+        updateGraph('perplexity-graph', history.perplexity, '#00D4FF');
     }
     
     // Update sequences

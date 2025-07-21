@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enhanced Training Visualization Dashboard</title>
+    <title>llm-trace</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Share+Tech+Mono&family=JetBrains+Mono:wght@300;400&family=Fira+Code:wght@400&display=swap');
         
         * {
             box-sizing: border-box;
@@ -14,8 +14,9 @@
         }
         
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: #0a0a0f;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 300;
+            background: #0A0E1B;
             color: #e0e0e0;
             overflow-x: hidden;
             line-height: 1.5;
@@ -25,64 +26,110 @@
             display: flex;
             flex-direction: column;
             min-height: 100vh;
-            padding: 20px;
-            max-width: 1400px;
-            margin: 0 auto;
+            padding: 0;
+            width: 100%;
+            margin: 0;
         }
         
         /* Header */
         .header {
             text-align: center;
             margin-bottom: 30px;
+            margin-top: 120px;
+            position: relative;
+        }
+        
+        .step-display {
+            position: absolute;
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 1em;
+            color: #FFB800;
+            text-transform: lowercase;
+            letter-spacing: 0.05em;
+            opacity: 0.8;
         }
         
         .header h1 {
+            font-family: 'Share Tech Mono', monospace;
             font-size: 2.5em;
-            font-weight: 700;
-            background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            font-weight: 400;
+            text-transform: lowercase;
+            letter-spacing: 0.05em;
+            color: #00D4FF;
             margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+        }
+        
+        .loading-dots {
+            display: inline-block;
+            width: 30px;
+            text-align: left;
+        }
+        
+        .loading-dots::after {
+            content: '';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+        
+        @keyframes dots {
+            0% { content: ''; }
+            25% { content: '.'; }
+            50% { content: '..'; }
+            75% { content: '...'; }
+            100% { content: ''; }
         }
         
         /* Metrics */
         .metrics {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            flex-wrap: wrap;
-            margin-bottom: 30px;
+            position: fixed;
+            top: 20px;
+            z-index: 3;
+        }
+        
+        .metrics.left {
+            left: 20px;
+        }
+        
+        .metrics.right {
+            right: 20px;
         }
         
         .metric-box {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            padding: 16px 32px;
+            background: rgba(13, 17, 23, 0.9);
+            border: 2px solid #00D4FF;
+            border-radius: 16px;
+            padding: 24px 40px;
             transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.3), inset 0 0 30px rgba(0, 212, 255, 0.1);
+            min-width: 200px;
         }
         
         .metric-box:hover {
-            border-color: rgba(96, 165, 250, 0.5);
-            background: rgba(96, 165, 250, 0.05);
+            border-color: #FF0080;
+            box-shadow: 0 0 30px rgba(255, 0, 128, 0.4), inset 0 0 20px rgba(255, 0, 128, 0.1);
         }
         
         .metric-label {
+            font-family: 'Share Tech Mono', monospace;
             font-size: 0.85em;
-            color: #888;
+            color: #00D4FF;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
-            font-weight: 500;
+            letter-spacing: 0.1em;
+            font-weight: 400;
         }
         
         .metric-value {
-            font-size: 2em;
-            font-weight: 600;
-            color: #fff;
-            font-family: 'JetBrains Mono', monospace;
-            margin-top: 4px;
+            font-family: 'Fira Code', monospace;
+            font-size: 3em;
+            font-weight: 400;
+            color: #00FF88;
+            margin-top: 8px;
+            text-shadow: 0 0 15px rgba(0, 255, 136, 0.5);
         }
         
         .metric-graph {
@@ -90,18 +137,19 @@
             bottom: 0;
             left: 0;
             right: 0;
-            height: 40px;
-            opacity: 0.3;
+            height: 60px;
+            opacity: 0.5;
         }
         
         /* Sequence visualization */
         .sequence-container {
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 16px;
-            padding: 24px;
+            background: transparent;
+            border: none;
+            border-radius: 0;
+            padding: 24px 0;
             overflow-x: auto;
             margin-bottom: 20px;
+            width: 100%;
         }
         
         .sequence-header {
@@ -109,12 +157,16 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
+            padding: 0 20px;
         }
         
         .sequence-title {
+            font-family: 'Orbitron', monospace;
             font-size: 1.2em;
-            font-weight: 600;
-            color: #fff;
+            font-weight: 700;
+            color: #00D4FF;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
         
         .sequence-controls {
@@ -124,30 +176,36 @@
         
         .sequence-button {
             padding: 6px 12px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(13, 17, 23, 0.9);
+            border: 1px solid #00D4FF;
             border-radius: 6px;
-            color: #888;
+            color: #00D4FF;
             font-size: 0.85em;
             cursor: pointer;
             transition: all 0.2s ease;
+            font-family: 'Share Tech Mono', monospace;
+            text-transform: uppercase;
         }
         
         .sequence-button:hover {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(0, 212, 255, 0.2);
             color: #fff;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
         }
         
         .sequence-button.active {
-            background: rgba(96, 165, 250, 0.2);
-            border-color: rgba(96, 165, 250, 0.5);
-            color: #60a5fa;
+            background: rgba(255, 0, 128, 0.2);
+            border-color: #FF0080;
+            color: #FF0080;
+            box-shadow: 0 0 20px rgba(255, 0, 128, 0.5);
         }
         
         .sequence-scroll {
             display: flex;
             gap: 16px;
             padding-bottom: 10px;
+            padding-left: 20px;
+            padding-right: 20px;
             min-width: min-content;
         }
         
@@ -159,15 +217,15 @@
         }
         
         .current-token {
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Fira Code', monospace;
             font-size: 1.1em;
-            font-weight: 600;
+            font-weight: 400;
             padding: 8px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(13, 17, 23, 0.9);
+            border: 1px solid #00D4FF;
             border-radius: 8px;
             margin-bottom: 16px;
-            color: #fff;
+            color: #00FF88;
             text-align: center;
             height: 50px;
             width: 140px;
@@ -179,21 +237,25 @@
             cursor: pointer;
             transition: all 0.2s ease;
             position: relative;
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
         }
         
         .current-token:hover {
-            background: rgba(255, 255, 255, 0.08);
-            border-color: rgba(96, 165, 250, 0.5);
+            background: rgba(0, 212, 255, 0.1);
+            border-color: #FF0080;
+            box-shadow: 0 0 25px rgba(255, 0, 128, 0.5);
         }
         
         .current-token.selected {
-            background: rgba(96, 165, 250, 0.1);
-            border-color: rgba(96, 165, 250, 0.5);
+            background: rgba(255, 0, 128, 0.2);
+            border-color: #FF0080;
+            box-shadow: 0 0 30px rgba(255, 0, 128, 0.6);
         }
         
         .predictions-container {
             width: 100%;
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(0, 212, 255, 0.2);
             border-radius: 8px;
             padding: 8px;
             position: relative;
@@ -264,13 +326,15 @@
         
         .mini-bar {
             flex: 1;
-            background: rgba(96, 165, 250, 0.3);
+            background: rgba(0, 212, 255, 0.4);
             min-height: 1px;
             transition: all 0.2s ease;
+            box-shadow: 0 0 3px rgba(0, 212, 255, 0.6);
         }
         
         .mini-bar.ground-truth {
-            background: rgba(34, 197, 94, 0.8);
+            background: #00FF88;
+            box-shadow: 0 0 5px rgba(0, 255, 136, 0.8);
         }
         
         /* Predictions */
@@ -288,7 +352,7 @@
             left: 0;
             top: 0;
             height: 100%;
-            background: rgba(96, 165, 250, 0.1);
+            background: linear-gradient(90deg, rgba(0, 212, 255, 0.2), rgba(0, 212, 255, 0.05));
             transition: width 0.3s ease;
         }
         
@@ -303,14 +367,15 @@
         
         .prediction-rank {
             font-size: 0.8em;
-            color: #666;
+            color: #00D4FF;
             margin-right: 8px;
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Share Tech Mono', monospace;
             min-width: 20px;
+            opacity: 0.7;
         }
         
         .prediction-token {
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Fira Code', monospace;
             font-size: 0.9em;
             flex: 1;
             color: #e0e0e0;
@@ -322,17 +387,19 @@
         
         .prediction-prob {
             font-size: 0.8em;
-            color: #888;
-            font-family: 'JetBrains Mono', monospace;
+            color: #FFB800;
+            font-family: 'Share Tech Mono', monospace;
+            opacity: 0.8;
         }
         
         .ground-truth .prediction-bar-bg {
-            background: rgba(34, 197, 94, 0.2);
+            background: linear-gradient(90deg, rgba(0, 255, 136, 0.3), rgba(0, 255, 136, 0.1));
         }
         
         .ground-truth .prediction-token {
-            color: #22c55e;
-            font-weight: 600;
+            color: #00FF88;
+            font-weight: 400;
+            text-shadow: 0 0 5px rgba(0, 255, 136, 0.5);
         }
         
         /* Connection status */
@@ -341,23 +408,27 @@
             top: 20px;
             right: 20px;
             padding: 8px 16px;
-            background: rgba(0, 0, 0, 0.8);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(13, 17, 23, 0.9);
+            border: 1px solid #00D4FF;
             border-radius: 20px;
             font-size: 0.85em;
-            font-weight: 500;
+            font-family: 'Share Tech Mono', monospace;
+            text-transform: uppercase;
             backdrop-filter: blur(10px);
             transition: all 0.3s ease;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
         }
         
         .connected {
-            color: #22c55e;
-            border-color: rgba(34, 197, 94, 0.5);
+            color: #00FF88;
+            border-color: #00FF88;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
         }
         
         .disconnected {
-            color: #ef4444;
-            border-color: rgba(239, 68, 68, 0.5);
+            color: #FF0040;
+            border-color: #FF0040;
+            box-shadow: 0 0 20px rgba(255, 0, 64, 0.5);
         }
         
         /* Loading animation */
@@ -367,7 +438,7 @@
             height: 20px;
             border: 2px solid rgba(255, 255, 255, 0.3);
             border-radius: 50%;
-            border-top-color: #60a5fa;
+            border-top-color: #00D4FF;
             animation: spin 1s ease-in-out infinite;
         }
         
@@ -375,47 +446,209 @@
             to { transform: rotate(360deg); }
         }
         
-        /* Scrollbar styling */
+        /* Hide scrollbar but keep scrolling functionality */
+        .sequence-container {
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE and Edge */
+        }
+        
         .sequence-container::-webkit-scrollbar {
-            height: 8px;
+            display: none; /* Chrome, Safari, Opera */
         }
         
-        .sequence-container::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 4px;
+        /* Additional cyberpunk effects */
+        @keyframes glow {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
         }
         
-        .sequence-container::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 4px;
+        .header h1 {
+            animation: glow 2s ease-in-out infinite;
         }
         
-        .sequence-container::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.3);
+        /* Animated scan line */
+        @keyframes scanline {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100vh); }
+        }
+        
+        .scanline {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(0, 212, 255, 0.2) 45%, 
+                rgba(0, 212, 255, 0.4) 50%, 
+                rgba(0, 212, 255, 0.2) 55%, 
+                transparent 100%
+            );
+            animation: scanline 8s linear infinite;
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        /* Background grid */
+        .grid-background {
+            position: fixed;
+            top: -50px;
+            left: -50px;
+            width: calc(100% + 100px);
+            height: calc(100% + 100px);
+            background-image: 
+                linear-gradient(rgba(0, 212, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 212, 255, 0.05) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: grid-scroll 20s linear infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        @keyframes grid-scroll {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+        
+        /* Floating particles */
+        .particles-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            border-radius: 50%;
+            opacity: 0;
+            animation: float-up 15s linear infinite;
+        }
+        
+        @keyframes float-up {
+            0% {
+                transform: translateY(100vh) translateX(0);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100px) translateX(20px);
+                opacity: 0;
+            }
+        }
+        
+        .particle.cyan {
+            background: #00D4FF;
+            box-shadow: 0 0 6px #00D4FF;
+        }
+        
+        .particle.magenta {
+            background: #FF0080;
+            box-shadow: 0 0 6px #FF0080;
+        }
+        
+        .particle.green {
+            background: #00FF88;
+            box-shadow: 0 0 6px #00FF88;
+        }
+        
+        /* Data stream effect */
+        @keyframes data-stream {
+            0% {
+                opacity: 0;
+                transform: translateY(0);
+            }
+            10% {
+                opacity: 0.3;
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(100px);
+            }
+        }
+        
+        .data-stream {
+            position: absolute;
+            width: 1px;
+            height: 40px;
+            background: linear-gradient(to bottom, 
+                rgba(0, 212, 255, 0.4), 
+                transparent
+            );
+            animation: data-stream 2s ease-out infinite;
+            pointer-events: none;
+        }
+        
+        /* High probability tokens get data streams */
+        .current-token {
+            position: relative;
+            overflow: visible;
+        }
+        
+        .current-token.high-prob::after {
+            content: "";
+            position: absolute;
+            bottom: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 1px;
+            height: 30px;
+            background: linear-gradient(to bottom, 
+                rgba(0, 255, 136, 0.6), 
+                transparent
+            );
+            animation: data-stream 3s ease-out infinite;
+        }
+        
+        /* Container z-index */
+        .container {
+            position: relative;
+            z-index: 2;
+        }
+        
+        body {
+            position: relative;
+            overflow-x: hidden;
         }
     </style>
 </head>
 <body>
+    <!-- Visual effects layers -->
+    <div class="grid-background"></div>
+    <div class="scanline"></div>
+    <div class="particles-container" id="particles"></div>
+    
     <div class="container">
         <div class="header">
-            <h1>Training Visualization Dashboard</h1>
-            <p style="color: #666;">Real-time visualization of transformer token predictions</p>
+            <h1>llm-trace :: monitoring<span class="loading-dots"></span></h1>
+            <div class="step-display">step: <span id="step-value">-</span></div>
         </div>
         
-        <div class="metrics">
-            <div class="metric-box">
-                <div class="metric-label">Step</div>
-                <div class="metric-value" id="step-value">-</div>
-            </div>
+        <div class="metrics left">
             <div class="metric-box">
                 <div class="metric-label">Loss</div>
                 <div class="metric-value" id="loss-value">-</div>
-                <canvas id="loss-graph" class="metric-graph" width="200" height="40"></canvas>
+                <canvas id="loss-graph" class="metric-graph" width="200" height="60"></canvas>
             </div>
+        </div>
+        
+        <div class="metrics right">
             <div class="metric-box">
                 <div class="metric-label">Perplexity</div>
                 <div class="metric-value" id="perplexity-value">-</div>
-                <canvas id="perplexity-graph" class="metric-graph" width="200" height="40"></canvas>
+                <canvas id="perplexity-graph" class="metric-graph" width="200" height="60"></canvas>
             </div>
         </div>
         
