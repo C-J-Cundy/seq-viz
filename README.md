@@ -67,7 +67,7 @@ writer.write_step(entry)
 ### 2. Start Visualization Server
 
 ```bash
-python -m seq_viz.server.file_visualization_server --file training_data.jsonl
+python run_server.py --file training_data.jsonl
 ```
 
 ### 3. Open Dashboard
@@ -178,13 +178,13 @@ if step_100:
 
 ```bash
 # Different port
-python -m seq_viz.server.file_visualization_server --port 8080
+python run_server.py --port 8080
 
 # Faster updates
-python -m seq_viz.server.file_visualization_server --interval 1.0
+python run_server.py --interval 1.0
 
 # Monitor specific file
-python -m seq_viz.server.file_visualization_server --file experiments/run1.jsonl
+python run_server.py --file experiments/run1.jsonl
 ```
 
 ## Testing

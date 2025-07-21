@@ -122,6 +122,11 @@ def test_tensor_conversion():
     display_pred['top_k'] = display_pred['top_k'][:3]  # Just top 3
     display_pred['top_20'] = display_pred['top_20'][:5]  # Just top 5
     
+    # Also check actual lengths
+    print(f"\nActual data lengths:")
+    print(f"  top_k length: {len(entry['sequences'][0]['predictions'][0]['top_k'])}")
+    print(f"  top_20 length: {len(entry['sequences'][0]['predictions'][0]['top_20'])}")
+    
     print(json.dumps(display_pred, indent=2))
 
 
