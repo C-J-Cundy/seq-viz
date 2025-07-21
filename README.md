@@ -271,10 +271,10 @@ seq-viz/
 ## Future Enhancements
 
 - [ ] Multi-sequence comparison view
-- [ ] Export visualizations as images/videos
-- [ ] Attention weight visualization
-- [ ] Token embedding similarity view
-- [ ] Training checkpoint comparison
+- [ ] Token ids shown faintly as well as strings
+- [ ] Ability to select training step via CLI 
+- [ ] More authentic-looking cyberpunk visuals
+- [ ] Creation of a callback to use with transformers `compute_metrics` function
 
 ## License
 
