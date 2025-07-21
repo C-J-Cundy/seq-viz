@@ -1,8 +1,11 @@
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import time
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
-from tensor_to_training_data import tensor_to_training_entry
-from data_writer import TrainingDataWriter
+from seq_viz.core import tensor_to_training_entry, TrainingDataWriter
 
 
 def simulate_training_writes():
@@ -29,7 +32,7 @@ def simulate_training_writes():
     ]
     
     # Initialize writer
-    writer = TrainingDataWriter("live_training_data.jsonl")
+    writer = TrainingDataWriter("../live_training_data.jsonl")
     
     print("Starting simulated training...")
     print("Run file_visualization_server.py in another terminal to see updates")

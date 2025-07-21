@@ -4,7 +4,7 @@ import json
 import time
 from pathlib import Path
 from typing import Optional, Dict, Any
-from data_reader import TrainingDataReader
+from ..core import TrainingDataReader
 
 
 class FileVisualizationServer:

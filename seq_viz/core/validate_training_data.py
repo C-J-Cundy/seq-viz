@@ -4,8 +4,11 @@ from pathlib import Path
 from typing import Dict, Any, List, Tuple
 
 
-def load_schema(schema_path: str = "training_data_schema.json") -> Dict[str, Any]:
+def load_schema(schema_path: str = None) -> Dict[str, Any]:
     """Load the JSON schema from file."""
+    if schema_path is None:
+        # Default to schema in same directory as this file
+        schema_path = Path(__file__).parent / "training_data_schema.json"
     with open(schema_path, 'r') as f:
         return json.load(f)
 

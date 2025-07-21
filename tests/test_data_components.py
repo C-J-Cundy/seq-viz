@@ -1,11 +1,14 @@
-from data_reader import TrainingDataReader
-from data_writer import TrainingDataWriter
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from seq_viz.core import TrainingDataReader, TrainingDataWriter
 
 
 def test_reader():
     """Test the data reader functionality."""
     print("Testing TrainingDataReader...")
-    reader = TrainingDataReader("training_data.jsonl")
+    reader = TrainingDataReader("../training_data.jsonl")
     
     # Get summary
     summary = reader.get_summary()
@@ -31,7 +34,7 @@ def test_reader():
 def test_writer():
     """Test the data writer functionality."""
     print("\n\nTesting TrainingDataWriter...")
-    writer = TrainingDataWriter("test_output.jsonl")
+    writer = TrainingDataWriter("../test_output.jsonl")
     
     # Create a minimal valid entry
     test_entry = {

@@ -1,7 +1,10 @@
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
-from tensor_to_training_data import tensor_to_training_entry, extract_batch_sample
-from data_writer import TrainingDataWriter
+from seq_viz.core import tensor_to_training_entry, extract_batch_sample, TrainingDataWriter
 import json
 
 
@@ -109,7 +112,7 @@ def test_tensor_conversion():
     
     # Write to file
     print("\n3. Testing write to file:")
-    writer = TrainingDataWriter("test_tensor_output.jsonl")
+    writer = TrainingDataWriter("../test_tensor_output.jsonl")
     success = writer.write_step(entry)
     print(f"Write successful: {success}")
     

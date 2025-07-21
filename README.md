@@ -37,8 +37,7 @@ pip install torch transformers jsonschema websockets
 ```python
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
-from tensor_to_training_data import tensor_to_training_entry
-from data_writer import TrainingDataWriter
+from seq_viz.core import tensor_to_training_entry, TrainingDataWriter
 
 # Load model and tokenizer
 model_name = "meta-llama/Llama-3.2-1B-Instruct"
@@ -68,13 +67,13 @@ writer.write_step(entry)
 ### 2. Start Visualization Server
 
 ```bash
-python file_visualization_server.py --file training_data.jsonl
+python -m seq_viz.server.file_visualization_server --file training_data.jsonl
 ```
 
 ### 3. Open Dashboard
 
 ```bash
-open enhanced_dashboard.html
+open seq_viz/web/enhanced_dashboard.html
 ```
 
 ## Architecture
@@ -160,7 +159,7 @@ for step, batch in enumerate(dataloader):
 ### Batch Analysis
 
 ```python
-from data_reader import TrainingDataReader
+from seq_viz.core import TrainingDataReader
 
 reader = TrainingDataReader("training_data.jsonl")
 
@@ -179,20 +178,20 @@ if step_100:
 
 ```bash
 # Different port
-python file_visualization_server.py --port 8080
+python -m seq_viz.server.file_visualization_server --port 8080
 
 # Faster updates
-python file_visualization_server.py --interval 1.0
+python -m seq_viz.server.file_visualization_server --interval 1.0
 
 # Monitor specific file
-python file_visualization_server.py --file experiments/run1.jsonl
+python -m seq_viz.server.file_visualization_server --file experiments/run1.jsonl
 ```
 
 ## Testing
 
 ```bash
 # Validate data format
-python validate_training_data.py training_data.jsonl
+python -m seq_viz.core.validate_training_data training_data.jsonl
 
 # Test tensor conversion
 python test_tensor_conversion.py
@@ -230,16 +229,27 @@ python test_file_server.py
 
 ```
 seq-viz/
-├── data_writer.py              # Write training data to JSONL
-├── data_reader.py              # Read and analyze training data
-├── tensor_to_training_data.py  # Convert PyTorch tensors to data format
-├── training_data_schema.json   # JSON schema for validation
-├── validate_training_data.py   # Validate JSONL files
-├── file_visualization_server.py # WebSocket server for file monitoring
-├── enhanced_dashboard.html     # Main visualization interface
-├── enhanced_dashboard.js       # Dashboard logic
-├── test_tensor_conversion.py   # Test tensor conversion
-├── test_file_server.py         # Test live updates
+├── seq_viz/
+│   ├── __init__.py
+│   ├── core/                   # Core data processing modules
+│   │   ├── __init__.py
+│   │   ├── data_writer.py      # Write training data to JSONL
+│   │   ├── data_reader.py      # Read and analyze training data
+│   │   ├── tensor_to_training_data.py  # Convert PyTorch tensors
+│   │   ├── validate_training_data.py   # Validate JSONL files
+│   │   └── training_data_schema.json   # JSON schema
+│   ├── server/                 # WebSocket server
+│   │   ├── __init__.py
+│   │   └── file_visualization_server.py # File monitoring server
+│   └── web/                    # Web visualization files
+│       ├── enhanced_dashboard.html     # Main visualization interface
+│       ├── enhanced_dashboard.js       # Dashboard logic
+│       └── simple_dashboard.html       # Simple dashboard
+├── tests/                      # Test files
+│   ├── test_tensor_conversion.py
+│   ├── test_file_server.py
+│   └── test_data_components.py
+├── training_data.jsonl         # Sample data file
 └── README.md                   # This file
 ```
 
@@ -250,7 +260,7 @@ seq-viz/
 - Run `validate_training_data.py` to debug
 
 ### Dashboard shows "Disconnected"
-- Ensure the server is running: `python file_visualization_server.py`
+- Ensure the server is running: `python -m seq_viz.server.file_visualization_server`
 - Check that the port (default 8765) is not in use
 - Verify the WebSocket URL in the dashboard matches the server
 

@@ -24,7 +24,11 @@ const history = {
 
 // Connect to WebSocket server
 function connectWebSocket() {
-    ws = new WebSocket('ws://localhost:8765');
+    // Use relative WebSocket URL - defaults to same host as page
+    const wsUrl = window.location.hostname === 'file' || window.location.protocol === 'file:' 
+        ? 'ws://localhost:8765' 
+        : `ws://${window.location.hostname}:8765`;
+    ws = new WebSocket(wsUrl);
     
     ws.onopen = () => {
         console.log('Connected to server');

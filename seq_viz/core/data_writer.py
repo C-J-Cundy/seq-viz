@@ -2,14 +2,14 @@ import json
 import time
 from pathlib import Path
 from typing import Dict, Any
-from validate_training_data import load_schema, validate_training_entry
+from .validate_training_data import load_schema, validate_training_entry
 
 
 class TrainingDataWriter:
     """Simple writer for training data that validates against schema."""
     
     def __init__(self, output_file: str = "training_data.jsonl", 
-                 schema_path: str = "training_data_schema.json"):
+                 schema_path: str = None):
         self.output_file = Path(output_file)
         self.schema = load_schema(schema_path)
     
