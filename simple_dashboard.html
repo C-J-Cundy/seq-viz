@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Training Data Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .status {
+            padding: 10px;
+            background-color: #e0e0e0;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .connected { background-color: #c8e6c9; }
+        .disconnected { background-color: #ffcdd2; }
+        
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .metric-card {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .metric-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .sequence {
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .tokens {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin: 10px 0;
+        }
+        .token {
+            padding: 5px 10px;
+            background: #e3f2fd;
+            border-radius: 3px;
+            position: relative;
+            cursor: pointer;
+        }
+        .token:hover {
+            background: #bbdefb;
+        }
+        .token.selected {
+            background: #90caf9;
+        }
+        
+        .predictions {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 5px;
+        }
+        .prediction-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid #ddd;
+        }
+        .prediction-item:last-child {
+            border-bottom: none;
+        }
+        .prob-bar {
+            height: 20px;
+            background: #4caf50;
+            border-radius: 3px;
+            margin-left: 10px;
+        }
+        
+        #log {
+            background: #263238;
+            color: #aed581;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Training Data Viewer</h1>
+        
+        <div id="status" class="status disconnected">
+            Disconnected from server
+        </div>
+        
+        <div class="metrics">
+            <div class="metric-card">
+                <div class="metric-label">Step</div>
+                <div class="metric-value" id="step">-</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Loss</div>
+                <div class="metric-value" id="loss">-</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Perplexity</div>
+                <div class="metric-value" id="perplexity">-</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Entropy</div>
+                <div class="metric-value" id="entropy">-</div>
+            </div>
+        </div>
+        
+        <div id="sequences"></div>
+        
+        <div>
+            <h3>Log</h3>
+            <div id="log"></div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let currentData = null;
+        let selectedPosition = 0;
+        
+        function log(message) {
+            const logEl = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logEl.innerHTML = `[${timestamp}] ${message}<br>` + logEl.innerHTML;
+        }
+        
+        function connect() {
+            ws = new WebSocket('ws://localhost:8765');
+            
+            ws.onopen = () => {
+                document.getElementById('status').textContent = 'Connected to server';
+                document.getElementById('status').className = 'status connected';
+                log('Connected to WebSocket server');
+            };
+            
+            ws.onclose = () => {
+                document.getElementById('status').textContent = 'Disconnected from server';
+                document.getElementById('status').className = 'status disconnected';
+                log('Disconnected from server');
+                
+                // Retry connection after 3 seconds
+                setTimeout(connect, 3000);
+            };
+            
+            ws.onerror = (error) => {
+                log(`WebSocket error: ${error}`);
+            };
+            
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    currentData = data;
+                    updateDisplay(data);
+                    log(`Received step ${data.step}`);
+                } catch (e) {
+                    log(`Error parsing message: ${e}`);
+                }
+            };
+        }
+        
+        function updateDisplay(data) {
+            // Update metrics
+            document.getElementById('step').textContent = data.step || '-';
+            document.getElementById('loss').textContent = data.loss ? data.loss.toFixed(4) : '-';
+            document.getElementById('perplexity').textContent = data.perplexity ? data.perplexity.toFixed(2) : '-';
+            
+            // Update sequences
+            const sequencesEl = document.getElementById('sequences');
+            sequencesEl.innerHTML = '';
+            
+            if (data.sequences && data.sequences.length > 0) {
+                data.sequences.forEach((seq, seqIdx) => {
+                    const seqDiv = document.createElement('div');
+                    seqDiv.className = 'sequence';
+                    
+                    const title = document.createElement('h3');
+                    title.textContent = `Sequence ${seqIdx + 1}`;
+                    seqDiv.appendChild(title);
+                    
+                    // Create tokens
+                    const tokensDiv = document.createElement('div');
+                    tokensDiv.className = 'tokens';
+                    
+                    seq.tokens.forEach((token, idx) => {
+                        const tokenEl = document.createElement('div');
+                        tokenEl.className = 'token';
+                        if (idx === selectedPosition) {
+                            tokenEl.classList.add('selected');
+                        }
+                        tokenEl.textContent = token;
+                        tokenEl.onclick = () => selectPosition(idx);
+                        tokensDiv.appendChild(tokenEl);
+                    });
+                    
+                    seqDiv.appendChild(tokensDiv);
+                    
+                    // Show predictions for selected position
+                    // Predictions at position i-1 predict token at position i
+                    if (selectedPosition > 0 && seq.predictions && seq.predictions[selectedPosition - 1]) {
+                        const pred = seq.predictions[selectedPosition - 1];
+                        
+                        // Update entropy
+                        document.getElementById('entropy').textContent = pred.entropy ? pred.entropy.toFixed(3) : '-';
+                        
+                        const predDiv = document.createElement('div');
+                        predDiv.className = 'predictions';
+                        
+                        const predTitle = document.createElement('h4');
+                        predTitle.textContent = `Predictions at position ${selectedPosition} (target: "${pred.target_token_str}")`;
+                        predDiv.appendChild(predTitle);
+                        
+                        // Show top 5 predictions
+                        if (pred.top_k) {
+                            pred.top_k.forEach((p, idx) => {
+                                const itemDiv = document.createElement('div');
+                                itemDiv.className = 'prediction-item';
+                                
+                                const label = document.createElement('span');
+                                label.textContent = `${idx + 1}. "${p.token_str}"`;
+                                
+                                const prob = document.createElement('span');
+                                prob.textContent = `${(p.prob * 100).toFixed(1)}%`;
+                                
+                                itemDiv.appendChild(label);
+                                itemDiv.appendChild(prob);
+                                
+                                predDiv.appendChild(itemDiv);
+                            });
+                        }
+                        
+                        seqDiv.appendChild(predDiv);
+                    }
+                    
+                    sequencesEl.appendChild(seqDiv);
+                });
+            }
+        }
+        
+        function selectPosition(pos) {
+            selectedPosition = pos;
+            if (currentData) {
+                updateDisplay(currentData);
+            }
+        }
+        
+        // Start connection
+        connect();
+    </script>
+</body>
+</html>

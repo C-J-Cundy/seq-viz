@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Training Visualization Dashboard</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            overflow-x: hidden;
+            line-height: 1.5;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            font-weight: 700;
+            background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+        
+        /* Metrics */
+        .metrics {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 30px;
+        }
+        
+        .metric-box {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 16px 32px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .metric-box:hover {
+            border-color: rgba(96, 165, 250, 0.5);
+            background: rgba(96, 165, 250, 0.05);
+        }
+        
+        .metric-label {
+            font-size: 0.85em;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 500;
+        }
+        
+        .metric-value {
+            font-size: 2em;
+            font-weight: 600;
+            color: #fff;
+            font-family: 'JetBrains Mono', monospace;
+            margin-top: 4px;
+        }
+        
+        .metric-graph {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            opacity: 0.3;
+        }
+        
+        /* Sequence visualization */
+        .sequence-container {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 24px;
+            overflow-x: auto;
+            margin-bottom: 20px;
+        }
+        
+        .sequence-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .sequence-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #fff;
+        }
+        
+        .sequence-controls {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .sequence-button {
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: #888;
+            font-size: 0.85em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .sequence-button:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+        
+        .sequence-button.active {
+            background: rgba(96, 165, 250, 0.2);
+            border-color: rgba(96, 165, 250, 0.5);
+            color: #60a5fa;
+        }
+        
+        .sequence-scroll {
+            display: flex;
+            gap: 16px;
+            padding-bottom: 10px;
+            min-width: min-content;
+        }
+        
+        .token-column {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 140px;
+        }
+        
+        .current-token {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.1em;
+            font-weight: 600;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            margin-bottom: 16px;
+            color: #fff;
+            text-align: center;
+            height: 50px;
+            width: 140px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        
+        .current-token:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(96, 165, 250, 0.5);
+        }
+        
+        .current-token.selected {
+            background: rgba(96, 165, 250, 0.1);
+            border-color: rgba(96, 165, 250, 0.5);
+        }
+        
+        .predictions-container {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 8px;
+            position: relative;
+        }
+        
+        /* Entropy visualization */
+        .entropy-box {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            padding: 8px;
+            margin-bottom: 8px;
+            position: relative;
+            height: 50px;
+            cursor: help;
+        }
+        
+        .entropy-clock {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        
+        .entropy-clock svg {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .entropy-clock-face {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.1);
+            stroke-width: 1.5;
+        }
+        
+        .entropy-clock-hand {
+            stroke: #a78bfa;
+            stroke-width: 2;
+            stroke-linecap: round;
+        }
+        
+        .entropy-clock-center {
+            fill: #a78bfa;
+        }
+        
+        .entropy-value {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.8em;
+            font-family: 'JetBrains Mono', monospace;
+            color: #a78bfa;
+            font-weight: 600;
+        }
+        
+        /* Mini probability chart */
+        .mini-chart {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 20px;
+            display: flex;
+            align-items: flex-end;
+            gap: 1px;
+            padding: 0 8px 4px;
+            pointer-events: none;
+        }
+        
+        .mini-bar {
+            flex: 1;
+            background: rgba(96, 165, 250, 0.3);
+            min-height: 1px;
+            transition: all 0.2s ease;
+        }
+        
+        .mini-bar.ground-truth {
+            background: rgba(34, 197, 94, 0.8);
+        }
+        
+        /* Predictions */
+        .prediction-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 6px;
+            position: relative;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .prediction-bar-bg {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            background: rgba(96, 165, 250, 0.1);
+            transition: width 0.3s ease;
+        }
+        
+        .prediction-content {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            padding: 6px 8px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .prediction-rank {
+            font-size: 0.8em;
+            color: #666;
+            margin-right: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            min-width: 20px;
+        }
+        
+        .prediction-token {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+            flex: 1;
+            color: #e0e0e0;
+            margin-right: 8px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .prediction-prob {
+            font-size: 0.8em;
+            color: #888;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .ground-truth .prediction-bar-bg {
+            background: rgba(34, 197, 94, 0.2);
+        }
+        
+        .ground-truth .prediction-token {
+            color: #22c55e;
+            font-weight: 600;
+        }
+        
+        /* Connection status */
+        #connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 8px 16px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 500;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+        
+        .connected {
+            color: #22c55e;
+            border-color: rgba(34, 197, 94, 0.5);
+        }
+        
+        .disconnected {
+            color: #ef4444;
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+        
+        /* Loading animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #60a5fa;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Scrollbar styling */
+        .sequence-container::-webkit-scrollbar {
+            height: 8px;
+        }
+        
+        .sequence-container::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+        
+        .sequence-container::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+        
+        .sequence-container::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Training Visualization Dashboard</h1>
+            <p style="color: #666;">Real-time visualization of transformer token predictions</p>
+        </div>
+        
+        <div class="metrics">
+            <div class="metric-box">
+                <div class="metric-label">Step</div>
+                <div class="metric-value" id="step-value">-</div>
+            </div>
+            <div class="metric-box">
+                <div class="metric-label">Loss</div>
+                <div class="metric-value" id="loss-value">-</div>
+                <canvas id="loss-graph" class="metric-graph" width="200" height="40"></canvas>
+            </div>
+            <div class="metric-box">
+                <div class="metric-label">Perplexity</div>
+                <div class="metric-value" id="perplexity-value">-</div>
+                <canvas id="perplexity-graph" class="metric-graph" width="200" height="40"></canvas>
+            </div>
+        </div>
+        
+        <div id="sequences-container"></div>
+    </div>
+    
+    <div id="connection-status" class="disconnected">
+        <span id="status-text">Disconnected</span>
+    </div>
+    
+    <script src="enhanced_dashboard.js"></script>
+</body>
+</html>

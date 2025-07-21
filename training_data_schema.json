@@ -1,0 +1,139 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["timestamp", "step", "loss", "perplexity", "sequences", "metadata"],
+  "properties": {
+    "timestamp": {
+      "type": "number",
+      "description": "Unix timestamp when this training step was recorded"
+    },
+    "step": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Training step number"
+    },
+    "loss": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Training loss value"
+    },
+    "perplexity": {
+      "type": "number",
+      "minimum": 1,
+      "description": "Model perplexity"
+    },
+    "sequences": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["tokens", "predictions"],
+        "properties": {
+          "tokens": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of token strings in the sequence"
+          },
+          "predictions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["position", "target_token_id", "target_token_str", "top_k", "top_20", "entropy"],
+              "properties": {
+                "position": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Position in the sequence"
+                },
+                "target_token_id": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "ID of the target token"
+                },
+                "target_token_str": {
+                  "type": "string",
+                  "description": "String representation of the target token"
+                },
+                "top_k": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["token_id", "token_str", "prob"],
+                    "properties": {
+                      "token_id": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "token_str": {
+                        "type": "string"
+                      },
+                      "prob": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      }
+                    }
+                  },
+                  "description": "Top K predicted tokens with probabilities"
+                },
+                "top_20": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["token_id", "token_str", "prob"],
+                    "properties": {
+                      "token_id": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "token_str": {
+                        "type": "string"
+                      },
+                      "prob": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      }
+                    }
+                  },
+                  "description": "Top 20 predicted tokens with probabilities"
+                },
+                "entropy": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "Prediction entropy at this position"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["model_name", "vocab_size", "batch_size", "sequence_length"],
+      "properties": {
+        "model_name": {
+          "type": "string",
+          "description": "Name of the model being trained"
+        },
+        "vocab_size": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Size of the model's vocabulary"
+        },
+        "batch_size": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Training batch size"
+        },
+        "sequence_length": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum sequence length"
+        }
+      }
+    }
+  }
+}
