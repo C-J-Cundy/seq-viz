@@ -1,3 +1,12 @@
 torch>=2.0.0
 websockets>=10.0
 numpy>=1.21.0
+transformers>=4.30.0
+jsonschema>=3.2.0
+
+# Optional dependencies for examples
+# trl>=0.7.0
+# datasets>=2.0.0
+# peft>=0.5.0
+# bitsandbytes>=0.41.0
+# accelerate>=0.20.0

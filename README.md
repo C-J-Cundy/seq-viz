@@ -28,6 +28,9 @@ cd seq-viz
 
 # Install dependencies
 pip install torch transformers jsonschema websockets
+
+# For HuggingFace integration examples
+pip install trl datasets
 ```
 
 ## Quick Start
@@ -75,6 +78,61 @@ python run_server.py --file training_data.jsonl
 ```bash
 open seq_viz/web/enhanced_dashboard.html
 ```
+
+## HuggingFace Integration
+
+The visualization system now includes a callback for seamless integration with HuggingFace Trainers:
+
+### Using with SFTTrainer
+
+```python
+from transformers import TrainingArguments
+from trl import SFTTrainer
+from seq_viz.integrations import VisualizationCallback
+
+# Create visualization callback
+viz_callback = VisualizationCallback(
+    output_file="training_viz.jsonl",
+    max_sequences_per_eval=4
+)
+
+# Add to trainer
+trainer = SFTTrainer(
+    model=model,
+    args=training_args,
+    train_dataset=train_dataset,
+    eval_dataset=eval_dataset,
+    tokenizer=tokenizer,
+    callbacks=[viz_callback]  # Just add the callback!
+)
+
+trainer.train()
+```
+
+### Using with Standard Trainer
+
+```python
+from transformers import Trainer
+from seq_viz.integrations import VisualizationCallback
+
+# Create callback
+viz_callback = VisualizationCallback("training_viz.jsonl")
+
+# Add to any Trainer
+trainer = Trainer(
+    model=model,
+    args=training_args,
+    train_dataset=train_dataset,
+    eval_dataset=eval_dataset,
+    callbacks=[viz_callback]
+)
+```
+
+The callback automatically:
+- Wraps your existing `compute_metrics` function (if any)
+- Captures model predictions during evaluation
+- Saves visualization data in real-time
+- Works with any HuggingFace Trainer variant
 
 ## Architecture
 
