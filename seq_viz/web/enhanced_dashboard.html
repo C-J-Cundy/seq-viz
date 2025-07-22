@@ -141,6 +141,85 @@
             opacity: 0.5;
         }
         
+        /* Minimalist Background Plots */
+        .plot-loss {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 800px;
+            height: 400px;
+            z-index: 1;
+            opacity: 0.6;
+        }
+        
+        .plot-entropy {
+            position: fixed;
+            bottom: 0;
+            right: 0;
+            width: 800px;
+            height: 400px;
+            z-index: 1;
+            opacity: 0.6;
+        }
+        
+        .plot-label {
+            position: fixed;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 1.2em;
+            color: rgba(0, 212, 255, 0.3);
+            text-transform: lowercase;
+            letter-spacing: 0.15em;
+            z-index: 2;
+        }
+        
+        .plot-label.loss {
+            bottom: 20px;
+            left: 40px;
+        }
+        
+        .plot-label.entropy {
+            bottom: 20px;
+            right: 40px;
+        }
+        
+        /* Plot tooltip */
+        .plot-tooltip {
+            position: fixed;
+            background: rgba(13, 17, 23, 0.95);
+            border: 1px solid rgba(0, 212, 255, 0.5);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85em;
+            color: #00D4FF;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            z-index: 1000;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+        }
+        
+        .plot-tooltip.visible {
+            opacity: 1;
+        }
+        
+        .plot-tooltip .label {
+            color: rgba(0, 212, 255, 0.7);
+            font-size: 0.9em;
+            margin-bottom: 2px;
+        }
+        
+        .plot-tooltip .value {
+            color: #00FF88;
+            font-weight: 400;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+        
+        .plot-tooltip.entropy .value {
+            color: #a78bfa;
+            text-shadow: 0 0 10px rgba(167, 139, 250, 0.5);
+        }
+        
         /* Sequence visualization */
         .sequence-container {
             background: transparent;
@@ -640,7 +719,6 @@
             <div class="metric-box">
                 <div class="metric-label">Loss</div>
                 <div class="metric-value" id="loss-value">-</div>
-                <canvas id="loss-graph" class="metric-graph" width="200" height="60"></canvas>
             </div>
         </div>
         
@@ -648,15 +726,26 @@
             <div class="metric-box">
                 <div class="metric-label">Perplexity</div>
                 <div class="metric-value" id="perplexity-value">-</div>
-                <canvas id="perplexity-graph" class="metric-graph" width="200" height="60"></canvas>
             </div>
         </div>
         
         <div id="sequences-container"></div>
     </div>
     
+    <!-- Minimalist background plots -->
+    <canvas id="loss-plot" class="plot-loss" width="800" height="400"></canvas>
+    <canvas id="entropy-plot" class="plot-entropy" width="800" height="400"></canvas>
+    <div class="plot-label loss">loss</div>
+    <div class="plot-label entropy">entropy</div>
+    
     <div id="connection-status" class="disconnected">
         <span id="status-text">Disconnected</span>
+    </div>
+    
+    <!-- Plot tooltip -->
+    <div id="plot-tooltip" class="plot-tooltip">
+        <div class="label"></div>
+        <div class="value"></div>
     </div>
     
     <script src="enhanced_dashboard.js"></script>

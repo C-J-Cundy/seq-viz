@@ -45,7 +45,16 @@ let selectedPosition = 0;
 const history = {
     loss: [],
     perplexity: [],
-    maxPoints: 50
+    entropy: [],
+    maxPoints: 100,  // More points for larger plots
+    timestamps: []
+};
+
+// Plot interaction state
+const plotState = {
+    lossPoints: [],
+    entropyPoints: [],
+    tooltip: null
 };
 
 // Connect to WebSocket server
@@ -177,6 +186,197 @@ function updateGraph(canvasId, data, color = '#60a5fa') {
     });
     
     ctx.stroke();
+}
+
+// Calculate simple moving average
+function calculateSMA(data, window = 5) {
+    const sma = [];
+    for (let i = 0; i < data.length; i++) {
+        const start = Math.max(0, i - window + 1);
+        const subset = data.slice(start, i + 1);
+        const avg = subset.reduce((a, b) => a + b, 0) / subset.length;
+        sma.push(avg);
+    }
+    return sma;
+}
+
+// Draw minimalist background plot
+function drawMinimalistPlot(canvasId, data, color = '#00D4FF', options = {}) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+    const padding = 60; // Generous padding
+    const plotWidth = width - padding * 2;
+    const plotHeight = height - padding * 2;
+    
+    // Clear canvas
+    ctx.clearRect(0, 0, width, height);
+    
+    if (data.length < 2) return;
+    
+    // Find min and max values
+    const minVal = Math.min(...data);
+    const maxVal = Math.max(...data);
+    const range = maxVal - minVal || 1;
+    
+    // Add some margin to the range for visual appeal
+    const margin = range * 0.1;
+    const adjustedMin = minVal - margin;
+    const adjustedMax = maxVal + margin;
+    const adjustedRange = adjustedMax - adjustedMin;
+    
+    // Store points for interaction
+    const points = [];
+    data.forEach((value, index) => {
+        const x = padding + (index / (data.length - 1)) * plotWidth;
+        const y = height - padding - ((value - adjustedMin) / adjustedRange) * plotHeight;
+        points.push({ x, y, value, index, step: history.timestamps[index] || index });
+    });
+    
+    // Store points based on plot type
+    if (options.isLoss) {
+        plotState.lossPoints = points;
+    } else {
+        plotState.entropyPoints = points;
+    }
+    
+    // Common smoothing for both plots
+    const smoothed = calculateSMA(data, Math.max(5, Math.floor(data.length / 20)));
+    
+    // Special handling for loss plot
+    if (options.isLoss) {
+        // Draw faint raw data line
+        ctx.strokeStyle = '#00D4FF33'; // Very faint neon blue
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        
+        data.forEach((value, index) => {
+            const x = padding + (index / (data.length - 1)) * plotWidth;
+            const y = height - padding - ((value - adjustedMin) / adjustedRange) * plotHeight;
+            
+            if (index === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        });
+        
+        ctx.stroke();
+        
+        // Draw the smoothed line with glow
+        ctx.shadowColor = '#00D4FF';
+        ctx.shadowBlur = 15;
+        ctx.strokeStyle = '#00D4FF'; // Bright neon blue
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        
+        smoothed.forEach((value, index) => {
+            const x = padding + (index / (smoothed.length - 1)) * plotWidth;
+            const y = height - padding - ((value - adjustedMin) / adjustedRange) * plotHeight;
+            
+            if (index === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        });
+        
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        
+        // Draw subtle dots at data points (like entropy plot)
+        ctx.fillStyle = '#00D4FF';
+        const dotInterval = Math.max(1, Math.floor(data.length / 20)); // Show max 20 dots
+        
+        data.forEach((value, index) => {
+            if (index % dotInterval === 0 || index === data.length - 1) {
+                const x = padding + (index / (data.length - 1)) * plotWidth;
+                const y = height - padding - ((value - adjustedMin) / adjustedRange) * plotHeight;
+                
+                // Outer glow
+                ctx.beginPath();
+                ctx.arc(x, y, 4, 0, Math.PI * 2);
+                ctx.fillStyle = '#00D4FF44';
+                ctx.fill();
+                
+                // Inner dot
+                ctx.beginPath();
+                ctx.arc(x, y, 2, 0, Math.PI * 2);
+                ctx.fillStyle = '#00D4FF';
+                ctx.fill();
+            }
+        });
+        
+    } else {
+        // For entropy plot - draw faint raw data first
+        ctx.strokeStyle = `${color}33`; // Very faint
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        
+        data.forEach((value, index) => {
+            const x = padding + (index / (data.length - 1)) * plotWidth;
+            const y = height - padding - ((value - adjustedMin) / adjustedRange) * plotHeight;
+            
+            if (index === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        });
+        
+        ctx.stroke();
+        
+        // Draw the smoothed line with glow
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 15;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        
+        smoothed.forEach((value, index) => {
+            const x = padding + (index / (smoothed.length - 1)) * plotWidth;
+            const y = height - padding - ((value - adjustedMin) / adjustedRange) * plotHeight;
+            
+            if (index === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        });
+        
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        
+        // Draw subtle dots at data points
+        ctx.fillStyle = color;
+        const dotInterval = Math.max(1, Math.floor(data.length / 20)); // Show max 20 dots
+        
+        data.forEach((value, index) => {
+            if (index % dotInterval === 0 || index === data.length - 1) {
+                const x = padding + (index / (data.length - 1)) * plotWidth;
+                const y = height - padding - ((value - adjustedMin) / adjustedRange) * plotHeight;
+                
+                // Outer glow
+                ctx.beginPath();
+                ctx.arc(x, y, 4, 0, Math.PI * 2);
+                ctx.fillStyle = `${color}44`;
+                ctx.fill();
+                
+                // Inner dot
+                ctx.beginPath();
+                ctx.arc(x, y, 2, 0, Math.PI * 2);
+                ctx.fillStyle = color;
+                ctx.fill();
+            }
+        });
+    }
 }
 
 // Create token column
@@ -384,24 +584,140 @@ function updateDashboard(data) {
     if (data.loss !== undefined) {
         lossElement.textContent = data.loss.toFixed(4);
         history.loss.push(data.loss);
+        history.timestamps.push(data.step || history.timestamps.length);
+        
         if (history.loss.length > history.maxPoints) {
             history.loss.shift();
+            history.timestamps.shift();
         }
-        updateGraph('loss-graph', history.loss, '#FF0080');
+        
+        // Draw the large minimalist plot with neon blue
+        drawMinimalistPlot('loss-plot', history.loss, '#00D4FF', { isLoss: true });
     }
     
     if (data.perplexity !== undefined) {
         perplexityElement.textContent = data.perplexity.toFixed(2);
         history.perplexity.push(data.perplexity);
+        
         if (history.perplexity.length > history.maxPoints) {
             history.perplexity.shift();
         }
-        updateGraph('perplexity-graph', history.perplexity, '#00D4FF');
+        
+        // No small graph anymore
+    }
+    
+    // Calculate average entropy from sequences
+    if (data.sequences && data.sequences.length > 0) {
+        let totalEntropy = 0;
+        let entropyCount = 0;
+        
+        data.sequences.forEach(seq => {
+            if (seq.predictions) {
+                seq.predictions.forEach(pred => {
+                    if (pred.entropy !== undefined) {
+                        totalEntropy += pred.entropy;
+                        entropyCount++;
+                    }
+                });
+            }
+        });
+        
+        if (entropyCount > 0) {
+            const avgEntropy = totalEntropy / entropyCount;
+            history.entropy.push(avgEntropy);
+            
+            if (history.entropy.length > history.maxPoints) {
+                history.entropy.shift();
+            }
+            
+            // Draw the entropy plot with the same color as token entropy (#a78bfa)
+            drawMinimalistPlot('entropy-plot', history.entropy, '#a78bfa');
+        }
     }
     
     // Update sequences
     updateSequenceDisplay();
 }
 
+// Initialize tooltip element
+function initTooltip() {
+    plotState.tooltip = document.getElementById('plot-tooltip');
+    plotState.tooltipLabel = plotState.tooltip.querySelector('.label');
+    plotState.tooltipValue = plotState.tooltip.querySelector('.value');
+}
+
+// Handle mouse movement over plots
+function handlePlotMouseMove(event, canvas, points, label, isEntropy = false) {
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    
+    // Find closest point
+    let closestPoint = null;
+    let minDistance = 20; // Pixel threshold
+    
+    points.forEach(point => {
+        const distance = Math.sqrt(Math.pow(x - point.x, 2) + Math.pow(y - point.y, 2));
+        if (distance < minDistance) {
+            minDistance = distance;
+            closestPoint = point;
+        }
+    });
+    
+    if (closestPoint) {
+        // Show tooltip
+        plotState.tooltip.classList.add('visible');
+        if (isEntropy) {
+            plotState.tooltip.classList.add('entropy');
+        } else {
+            plotState.tooltip.classList.remove('entropy');
+        }
+        
+        plotState.tooltipLabel.textContent = `${label} @ step ${closestPoint.step}`;
+        plotState.tooltipValue.textContent = closestPoint.value.toFixed(4);
+        
+        // Position tooltip
+        const tooltipX = event.clientX + 15;
+        const tooltipY = event.clientY - 30;
+        plotState.tooltip.style.left = tooltipX + 'px';
+        plotState.tooltip.style.top = tooltipY + 'px';
+    } else {
+        // Hide tooltip
+        plotState.tooltip.classList.remove('visible');
+    }
+}
+
+// Initialize mouse events for plots
+function initPlotInteractions() {
+    const lossCanvas = document.getElementById('loss-plot');
+    const entropyCanvas = document.getElementById('entropy-plot');
+    
+    if (lossCanvas) {
+        lossCanvas.addEventListener('mousemove', (e) => {
+            handlePlotMouseMove(e, lossCanvas, plotState.lossPoints, 'loss', false);
+        });
+        
+        lossCanvas.addEventListener('mouseleave', () => {
+            plotState.tooltip.classList.remove('visible');
+        });
+    }
+    
+    if (entropyCanvas) {
+        entropyCanvas.addEventListener('mousemove', (e) => {
+            handlePlotMouseMove(e, entropyCanvas, plotState.entropyPoints, 'entropy', true);
+        });
+        
+        entropyCanvas.addEventListener('mouseleave', () => {
+            plotState.tooltip.classList.remove('visible');
+        });
+    }
+}
+
 // Initialize
 connectWebSocket();
+
+// Initialize interactions when DOM is ready
+window.addEventListener('DOMContentLoaded', () => {
+    initTooltip();
+    initPlotInteractions();
+});
