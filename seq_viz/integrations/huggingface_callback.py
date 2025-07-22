@@ -46,10 +46,10 @@ class VisualizationCallback(TrainerCallback):
         args,
         state,
         control,
+        metrics=None,
         model=None,
         tokenizer=None,
         eval_dataloader=None,
-        logs=None,
         **kwargs,
     ):
         """Called after evaluation phase."""
@@ -74,8 +74,17 @@ class VisualizationCallback(TrainerCallback):
             return
 
         try:
-            # Extract current metrics
-            current_loss = logs.get("eval_loss", 0.0) if logs else 0.0
+            # Debug: print metrics keys
+            if metrics:
+                print(f"VisualizationCallback: Available metrics keys: {list(metrics.keys())}")
+                print(f"VisualizationCallback: Metrics values: {metrics}")
+            else:
+                print("VisualizationCallback: No metrics received!")
+            
+            # Extract current metrics - try both 'loss' and 'eval_loss'
+            current_loss = 0.0
+            if metrics:
+                current_loss = metrics.get("eval_loss", metrics.get("loss", 0.0))
             current_step = state.global_step
 
             # Get vocab size from model
