@@ -39,7 +39,7 @@
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["position", "target_token_id", "target_token_str", "top_k", "top_20", "entropy"],
+              "required": ["position", "target_token_id", "target_token_str", "top_k", "top_20", "entropy", "loss"],
               "properties": {
                 "position": {
                   "type": "integer",
@@ -54,6 +54,11 @@
                 "target_token_str": {
                   "type": "string",
                   "description": "String representation of the target token"
+                },
+                "loss": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "Cross-entropy loss for this token prediction"
                 },
                 "top_k": {
                   "type": "array",

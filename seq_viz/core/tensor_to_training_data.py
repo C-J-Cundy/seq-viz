@@ -78,6 +78,11 @@ def tensor_to_training_entry(
             target_token_id = input_ids[batch_idx, pos + 1].item()
             target_token_str = tokenizer.decode(target_token_id, skip_special_tokens=False)
             
+            # Calculate per-token cross-entropy loss
+            token_loss = F.cross_entropy(pos_logits.unsqueeze(0), 
+                                        torch.tensor([target_token_id], device=pos_logits.device),
+                                        reduction='none').item()
+            
             # Get top-k predictions
             top_k_probs, top_k_indices = torch.topk(probs, min(top_k, vocab_size))
             top_k_predictions = []
@@ -102,6 +107,7 @@ def tensor_to_training_entry(
                 "position": pos,
                 "target_token_id": target_token_id,
                 "target_token_str": target_token_str,
+                "loss": token_loss,
                 "top_k": top_k_predictions,
                 "top_20": top_20_predictions,
                 "entropy": entropy

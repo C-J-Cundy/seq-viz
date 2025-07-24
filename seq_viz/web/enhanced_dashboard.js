@@ -379,6 +379,203 @@ function drawMinimalistPlot(canvasId, data, color = '#00D4FF', options = {}) {
     }
 }
 
+// Animation state for Joy plot
+const joyPlotAnimation = {
+    previousData: null,
+    currentData: null,
+    animationProgress: 0,
+    animationId: null,
+    startTime: null
+};
+
+// Interpolate between two loss values with spatial wave effect
+function interpolateLoss(oldLoss, newLoss, progress, position, totalPositions) {
+    // Create a sigmoid wave that moves from left to right
+    const wavePosition = progress * 1.4 - 0.2; // Wave starts off-screen left, ends off-screen right
+    const normalizedPosition = position / totalPositions;
+    
+    // Sigmoid function centered at the wave position
+    const waveWidth = 0.2; // Controls how sharp the transition is
+    const distance = normalizedPosition - wavePosition;
+    const sigmoid = 1 / (1 + Math.exp(-distance / waveWidth * 10));
+    
+    // Interpolate based on the sigmoid value
+    return oldLoss + (newLoss - oldLoss) * sigmoid;
+}
+
+// Draw Joy Division style sparkline plot
+function drawJoyPlotSparkline(canvas, allSequences, selectedSeqIndex, animate = true) {
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+    
+    // Clear canvas
+    ctx.clearRect(0, 0, width, height);
+    
+    // Scale for device pixel ratio
+    const dpr = window.devicePixelRatio || 1;
+    ctx.scale(dpr, dpr);
+    
+    // Use actual dimensions for drawing
+    const drawWidth = width / dpr;
+    const drawHeight = height / dpr;
+    
+    // Calculate layout for multiple sequences
+    const padding = 40;
+    const plotWidth = drawWidth - padding * 2;
+    const sequenceCount = allSequences.length;
+    const sequenceHeight = (drawHeight - padding * 2) / sequenceCount;
+    const overlap = sequenceHeight * 0.3; // 30% overlap for Joy Division effect
+    
+    // Find global min/max across all sequences for consistent scaling
+    let globalMinLoss = Infinity;
+    let globalMaxLoss = -Infinity;
+    
+    allSequences.forEach(sequence => {
+        if (sequence.predictions) {
+            sequence.predictions.forEach(pred => {
+                const loss = pred.loss || 0;
+                globalMinLoss = Math.min(globalMinLoss, loss);
+                globalMaxLoss = Math.max(globalMaxLoss, loss);
+            });
+        }
+    });
+    
+    const globalRange = globalMaxLoss - globalMinLoss || 1;
+    
+    // Draw sequences from back to front (reverse order)
+    for (let seqIdx = sequenceCount - 1; seqIdx >= 0; seqIdx--) {
+        const sequence = allSequences[seqIdx];
+        if (!sequence.predictions || sequence.predictions.length === 0) continue;
+        
+        // Extract loss values
+        let losses = sequence.predictions.map(pred => pred.loss || 0);
+        
+        // Apply animation if we have previous data
+        if (animate && joyPlotAnimation.previousData && 
+            joyPlotAnimation.animationProgress < 1 &&
+            joyPlotAnimation.previousData[seqIdx] &&
+            joyPlotAnimation.previousData[seqIdx].predictions) {
+            
+            const oldLosses = joyPlotAnimation.previousData[seqIdx].predictions.map(pred => pred.loss || 0);
+            
+            
+            // Interpolate between old and new losses with wave effect
+            losses = losses.map((newLoss, idx) => {
+                if (idx < oldLosses.length) {
+                    return interpolateLoss(oldLosses[idx], newLoss, 
+                                         joyPlotAnimation.animationProgress, 
+                                         idx, losses.length - 1);
+                }
+                return newLoss;
+            });
+        }
+        
+        // Calculate vertical position
+        const baseY = padding + seqIdx * (sequenceHeight - overlap);
+        const waveHeight = sequenceHeight * 0.8; // Use 80% of allocated height for the wave
+        
+        // Set style based on whether this is the selected sequence
+        const isSelected = seqIdx === selectedSeqIndex;
+        ctx.strokeStyle = isSelected ? '#00D4FF' : '#00D4FF66';
+        ctx.lineWidth = isSelected ? 2.5 : 1.5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        
+        // Add glow for selected sequence
+        if (isSelected) {
+            ctx.shadowColor = '#00D4FF';
+            ctx.shadowBlur = 15;
+        } else {
+            ctx.shadowColor = '#00D4FF';
+            ctx.shadowBlur = 5;
+        }
+        
+        // Create the path
+        ctx.beginPath();
+        
+        losses.forEach((loss, index) => {
+            const x = padding + (index / (losses.length - 1)) * plotWidth;
+            const normalizedLoss = (loss - globalMinLoss) / globalRange;
+            const y = baseY + waveHeight - (normalizedLoss * waveHeight);
+            
+            if (index === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        });
+        
+        ctx.stroke();
+        
+        // Fill area under the curve - extend to next sequence
+        ctx.shadowBlur = 0;
+        
+        // Calculate where the fill should extend to
+        // Use consistent gradient height for all sequences
+        const gradientHeight = sequenceHeight * 1.5; // Extend gradient 50% beyond the wave height
+        const fillBottomY = baseY + gradientHeight;
+        
+        // Create gradient that fades as it goes down
+        const gradient = ctx.createLinearGradient(0, baseY, 0, fillBottomY);
+        if (isSelected) {
+            gradient.addColorStop(0, 'rgba(0, 212, 255, 0.3)');
+            gradient.addColorStop(0.3, 'rgba(0, 212, 255, 0.15)');
+            gradient.addColorStop(0.6, 'rgba(0, 212, 255, 0.05)');
+            gradient.addColorStop(0.85, 'rgba(0, 212, 255, 0.01)');
+            gradient.addColorStop(1, 'rgba(0, 212, 255, 0)');
+        } else {
+            gradient.addColorStop(0, 'rgba(0, 212, 255, 0.15)');
+            gradient.addColorStop(0.3, 'rgba(0, 212, 255, 0.08)');
+            gradient.addColorStop(0.6, 'rgba(0, 212, 255, 0.02)');
+            gradient.addColorStop(0.85, 'rgba(0, 212, 255, 0.005)');
+            gradient.addColorStop(1, 'rgba(0, 212, 255, 0)');
+        }
+        
+        ctx.fillStyle = gradient;
+        ctx.lineTo(drawWidth - padding, fillBottomY);
+        ctx.lineTo(padding, fillBottomY);
+        ctx.closePath();
+        ctx.fill();
+    }
+    
+    // Reset transform
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+}
+
+// Animate Joy plot when new data arrives
+function animateJoyPlot(canvas, newSequences, selectedSeqIndex) {
+    // Cancel any existing animation
+    if (joyPlotAnimation.animationId) {
+        cancelAnimationFrame(joyPlotAnimation.animationId);
+    }
+    
+    // Store the new data as target
+    joyPlotAnimation.currentData = newSequences;
+    joyPlotAnimation.animationProgress = 0;
+    joyPlotAnimation.startTime = performance.now();
+    
+    const duration = 3000; // 3 second animation - much longer to see the effect
+    
+    function animate(currentTime) {
+        const elapsed = currentTime - joyPlotAnimation.startTime;
+        joyPlotAnimation.animationProgress = Math.min(elapsed / duration, 1);
+        
+        // Draw with current animation progress
+        drawJoyPlotSparkline(canvas, newSequences, selectedSeqIndex, true);
+        
+        if (joyPlotAnimation.animationProgress < 1) {
+            joyPlotAnimation.animationId = requestAnimationFrame(animate);
+        } else {
+            // Animation complete, update previous data for next time
+            joyPlotAnimation.previousData = JSON.parse(JSON.stringify(newSequences));
+            joyPlotAnimation.animationId = null;
+        }
+    }
+    
+    joyPlotAnimation.animationId = requestAnimationFrame(animate);
+}
+
 // Create token column
 function createTokenColumn(token, predictions, position, isSelected) {
     const column = document.createElement('div');
@@ -439,10 +636,27 @@ function createTokenColumn(token, predictions, position, isSelected) {
         entropyValue.style.textAlign = 'center';
         entropyValue.style.fontSize = '1em';
         entropyValue.style.fontWeight = '600';
-        entropyValue.style.color = '#FF0080';
         entropyValue.style.fontFamily = 'Share Tech Mono, monospace';
-        entropyValue.style.textShadow = '0 0 5px rgba(255, 0, 128, 0.5)';
-        entropyValue.textContent = predictions.entropy.toFixed(3);
+        
+        // Create loss and entropy display
+        const lossSpan = document.createElement('span');
+        lossSpan.style.color = '#FFB800';
+        lossSpan.style.textShadow = '0 0 5px rgba(255, 184, 0, 0.5)';
+        lossSpan.textContent = predictions.loss ? predictions.loss.toFixed(2) : '0.00';
+        
+        const separator = document.createElement('span');
+        separator.style.color = '#666';
+        separator.style.margin = '0 6px';
+        separator.textContent = '|';
+        
+        const entropySpan = document.createElement('span');
+        entropySpan.style.color = '#FF0080';
+        entropySpan.style.textShadow = '0 0 5px rgba(255, 0, 128, 0.5)';
+        entropySpan.textContent = predictions.entropy.toFixed(2);
+        
+        entropyValue.appendChild(lossSpan);
+        entropyValue.appendChild(separator);
+        entropyValue.appendChild(entropySpan);
         
         entropyBox.appendChild(entropyValue);
         entropyBox.appendChild(createMiniChart(predictions, predictions.target_token_id));
@@ -507,7 +721,7 @@ function createTokenColumn(token, predictions, position, isSelected) {
 }
 
 // Update sequence display
-function updateSequenceDisplay() {
+function updateSequenceDisplay(animateJoy = false, previousSequences = null) {
     if (!currentData || !currentData.sequences) return;
     
     const sequence = currentData.sequences[selectedSequence];
@@ -521,7 +735,10 @@ function updateSequenceDisplay() {
         sequencesContainer.appendChild(seqContainer);
     }
     
-    // Clear and rebuild
+    // Keep Joy plot canvas if it exists
+    const existingJoyCanvas = document.getElementById('joy-plot-canvas');
+    
+    // Clear and rebuild (but preserve Joy plot)
     seqContainer.innerHTML = '';
     
     // Header
@@ -574,10 +791,147 @@ function updateSequenceDisplay() {
     });
     
     seqContainer.appendChild(scroll);
+    
+    // Joy plot sparkline - below tokens, above loss/entropy graphs
+    let sparklineContainer = document.getElementById('joy-plot-container');
+    let sparklineCanvas = document.getElementById('joy-plot-canvas');
+    
+    if (!sparklineContainer) {
+        sparklineContainer = document.createElement('div');
+        sparklineContainer.id = 'joy-plot-container';
+        sparklineContainer.style.width = '100%';
+        sparklineContainer.style.height = '300px'; // Taller to fill more space
+        sparklineContainer.style.marginTop = '40px';
+        sparklineContainer.style.marginBottom = '40px';
+        sparklineContainer.style.position = 'relative';
+        
+        sparklineCanvas = document.createElement('canvas');
+        sparklineCanvas.id = 'joy-plot-canvas';
+        sparklineCanvas.style.width = '100%';
+        sparklineCanvas.style.height = '100%';
+        sparklineCanvas.style.display = 'block';
+        
+        sparklineContainer.appendChild(sparklineCanvas);
+        seqContainer.appendChild(sparklineContainer);
+    } else {
+        // Canvas already exists, just update it
+        seqContainer.appendChild(sparklineContainer);
+    }
+    
+    // Set canvas resolution (will be adjusted on resize)
+    const updateCanvasSize = (animate = false) => {
+        const rect = sparklineContainer.getBoundingClientRect();
+        sparklineCanvas.width = rect.width * window.devicePixelRatio;
+        sparklineCanvas.height = 300 * window.devicePixelRatio;
+        
+        // Use animation for data updates, but not for resize
+        if (animate && previousSequences) {
+            // Set previous data before animating
+            joyPlotAnimation.previousData = previousSequences;
+            animateJoyPlot(sparklineCanvas, currentData.sequences, selectedSequence);
+        } else {
+            drawJoyPlotSparkline(sparklineCanvas, currentData.sequences, selectedSequence, false);
+            // Initialize previous data if not set
+            if (!joyPlotAnimation.previousData) {
+                joyPlotAnimation.previousData = JSON.parse(JSON.stringify(currentData.sequences));
+            }
+        }
+    };
+    
+    // Update canvas after DOM is ready
+    setTimeout(() => {
+        const rect = sparklineContainer.getBoundingClientRect();
+        sparklineCanvas.width = rect.width * window.devicePixelRatio;
+        sparklineCanvas.height = 300 * window.devicePixelRatio;
+        
+        if (animateJoy && previousSequences) {
+            joyPlotAnimation.previousData = previousSequences;
+            animateJoyPlot(sparklineCanvas, currentData.sequences, selectedSequence);
+        } else {
+            drawJoyPlotSparkline(sparklineCanvas, currentData.sequences, selectedSequence, false);
+            if (!joyPlotAnimation.previousData) {
+                joyPlotAnimation.previousData = JSON.parse(JSON.stringify(currentData.sequences));
+            }
+        }
+    }, 0);
+}
+
+// Create burst of particles for data update
+function createDataUpdateBurst() {
+    const particlesContainer = document.getElementById('particles');
+    const colors = ['cyan', 'magenta', 'green', 'yellow'];
+    
+    // Use DocumentFragment for better performance
+    const fragment = document.createDocumentFragment();
+    const burstParticles = [];
+    
+    // Reduce particle count and stagger creation
+    const particleCount = 50; // Reduced from 100
+    const batchSize = 10;
+    let created = 0;
+    
+    function createBatch() {
+        for (let i = 0; i < batchSize && created < particleCount; i++, created++) {
+            const particle = document.createElement('div');
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            particle.className = `particle ${color}`;
+            
+            // Add yellow style if needed
+            if (color === 'yellow') {
+                particle.style.background = 'radial-gradient(circle at 30% 30%, #FFD700, #FFA500)';
+                particle.style.boxShadow = '0 0 10px #FFD700';
+            }
+            
+            // Random horizontal position
+            particle.style.left = Math.random() * 100 + '%';
+            
+            // Use CSS transform for better performance
+            particle.style.transform = 'translateZ(0)'; // Enable hardware acceleration
+            
+            // Use same slow drift animation as regular particles
+            particle.style.animationDuration = (12 + Math.random() * 6) + 's';
+            particle.style.animationDelay = Math.random() * 2 + 's';
+            
+            fragment.appendChild(particle);
+            burstParticles.push(particle);
+        }
+        
+        // Add batch to DOM
+        particlesContainer.appendChild(fragment);
+        
+        // Schedule next batch
+        if (created < particleCount) {
+            requestAnimationFrame(createBatch);
+        }
+    }
+    
+    // Start creating particles
+    createBatch();
+    
+    // Remove burst particles after 20 seconds
+    setTimeout(() => {
+        // Remove in batches too
+        let index = 0;
+        function removeBatch() {
+            for (let i = 0; i < 10 && index < burstParticles.length; i++, index++) {
+                burstParticles[index].remove();
+            }
+            if (index < burstParticles.length) {
+                requestAnimationFrame(removeBatch);
+            }
+        }
+        removeBatch();
+    }, 20000);
 }
 
 // Update dashboard with new data
 function updateDashboard(data) {
+    // Store previous data BEFORE updating currentData
+    const hadPreviousData = currentData && currentData.sequences;
+    const previousSequences = hadPreviousData ? JSON.parse(JSON.stringify(currentData.sequences)) : null;
+    
+    // Create particle burst to indicate update
+    createDataUpdateBurst();
     // Update metrics
     stepElement.textContent = data.step || '-';
     
@@ -635,8 +989,8 @@ function updateDashboard(data) {
         }
     }
     
-    // Update sequences
-    updateSequenceDisplay();
+    // Update sequences - animate if we have new data
+    updateSequenceDisplay(true, previousSequences);
 }
 
 // Initialize tooltip element

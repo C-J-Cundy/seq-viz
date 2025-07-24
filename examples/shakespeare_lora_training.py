@@ -73,7 +73,7 @@ def prepare_dataset(text_path, tokenizer, block_size=256):
 
         texts = []
         for text in examples["text"]:
-            if random.random() < 0.2:  # 20% chance to add prompt
+            if random.random() < 0.05:  # 20% chance to add prompt
                 prompt = random.choice(shakespeare_prompts)
                 texts.append(prompt + text)
             else:
@@ -98,7 +98,7 @@ def prepare_dataset(text_path, tokenizer, block_size=256):
     )
 
     # Split into train/eval
-    split_dataset = tokenized_dataset.train_test_split(test_size=0.1, seed=42)
+    split_dataset = tokenized_dataset.train_test_split(test_size=0.025, seed=42)
 
     return split_dataset["train"], split_dataset["test"]
 
@@ -155,7 +155,7 @@ def main():
         num_train_epochs=2,  # Can do more epochs with LoRA
         per_device_train_batch_size=8,  # Can use larger batch with LoRA
         per_device_eval_batch_size=8,
-        warmup_steps=100,
+        warmup_steps=2,
         weight_decay=0.01,
         logging_dir="./logs",
         logging_steps=10,
@@ -167,7 +167,7 @@ def main():
         metric_for_best_model="loss",
         greater_is_better=False,
         report_to="none",
-        learning_rate=3e-4,  # Higher LR works well with LoRA
+        learning_rate=3e-3,  # Higher LR works well with LoRA
         # bf16=True,
     )
 
