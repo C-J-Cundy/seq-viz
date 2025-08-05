@@ -75,12 +75,12 @@ class VisualizationCallback(TrainerCallback):
 
         try:
             # Debug: print metrics keys
-            if metrics:
-                print(f"VisualizationCallback: Available metrics keys: {list(metrics.keys())}")
-                print(f"VisualizationCallback: Metrics values: {metrics}")
-            else:
-                print("VisualizationCallback: No metrics received!")
-            
+            # if metrics:
+            #     print(f"VisualizationCallback: Available metrics keys: {list(metrics.keys())}")
+            #     print(f"VisualizationCallback: Metrics values: {metrics}")
+            # else:
+            #     print("VisualizationCallback: No metrics received!")
+
             # Extract current metrics - try both 'loss' and 'eval_loss'
             current_loss = 0.0
             if metrics:

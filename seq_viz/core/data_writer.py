@@ -1,4 +1,5 @@
 import json
+import os
 import time
 from pathlib import Path
 from typing import Any, Dict
@@ -33,7 +34,9 @@ class TrainingDataWriter:
             return False
 
         # Write to file
-        with open(self.output_file, "a") as f:
-            f.write(json.dumps(step_data) + "\n")
+        local_rank = int(os.environ.get("LOCAL_RANK", "0"))
+        if local_rank == 0:
+            with open(self.output_file, "a") as f:
+                f.write(json.dumps(step_data) + "\n")
 
         return True
