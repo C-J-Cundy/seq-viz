@@ -792,30 +792,24 @@ function updateSequenceDisplay(animateJoy = false, previousSequences = null) {
     
     seqContainer.appendChild(scroll);
     
-    // Joy plot sparkline - below tokens, above loss/entropy graphs
+    // Joy plot sparkline - fixed at bottom of screen
     let sparklineContainer = document.getElementById('joy-plot-container');
     let sparklineCanvas = document.getElementById('joy-plot-canvas');
     
     if (!sparklineContainer) {
         sparklineContainer = document.createElement('div');
         sparklineContainer.id = 'joy-plot-container';
-        sparklineContainer.style.width = '100%';
-        sparklineContainer.style.height = '300px'; // Taller to fill more space
-        sparklineContainer.style.marginTop = '40px';
-        sparklineContainer.style.marginBottom = '40px';
-        sparklineContainer.style.position = 'relative';
         
         sparklineCanvas = document.createElement('canvas');
         sparklineCanvas.id = 'joy-plot-canvas';
         sparklineCanvas.style.width = '100%';
         sparklineCanvas.style.height = '100%';
         sparklineCanvas.style.display = 'block';
+        sparklineCanvas.style.pointerEvents = 'none'; // Allow clicks to pass through
         
         sparklineContainer.appendChild(sparklineCanvas);
-        seqContainer.appendChild(sparklineContainer);
-    } else {
-        // Canvas already exists, just update it
-        seqContainer.appendChild(sparklineContainer);
+        // Append to body instead of sequence container so it stays fixed
+        document.body.appendChild(sparklineContainer);
     }
     
     // Set canvas resolution (will be adjusted on resize)

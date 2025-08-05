@@ -86,7 +86,7 @@
         .metrics {
             position: fixed;
             top: 20px;
-            z-index: 3;
+            z-index: 15; /* Higher z-index to ensure visibility */
         }
         
         .metrics.left {
@@ -229,6 +229,7 @@
             overflow-x: auto;
             margin-bottom: 20px;
             width: 100%;
+            padding-top: 140px; /* Increased to match new header position */
         }
         
         .sequence-header {
@@ -237,6 +238,16 @@
             align-items: center;
             margin-bottom: 20px;
             padding: 0 20px;
+            position: fixed;
+            top: 220px; /* Moved down to avoid overlapping with title */
+            left: 0;
+            right: 0;
+            background: transparent;
+            backdrop-filter: none;
+            z-index: 10; /* Higher z-index to ensure it's above everything */
+            padding-top: 15px;
+            padding-bottom: 15px;
+            /* Removed border-bottom for cleaner look */
         }
         
         .sequence-title {
@@ -286,6 +297,7 @@
             padding-left: 20px;
             padding-right: 20px;
             min-width: min-content;
+            margin-bottom: 350px; /* Make room for fixed sparkline */
         }
         
         .token-column {
@@ -485,7 +497,7 @@
         #connection-status {
             position: fixed;
             top: 20px;
-            right: 20px;
+            right: 240px; /* Move left to avoid overlapping with perplexity metric */
             padding: 8px 16px;
             background: rgba(13, 17, 23, 0.9);
             border: 1px solid #00D4FF;
@@ -496,6 +508,7 @@
             backdrop-filter: blur(10px);
             transition: all 0.3s ease;
             box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+            z-index: 15; /* Ensure visibility */
         }
         
         .connected {
@@ -700,6 +713,24 @@
         body {
             position: relative;
             overflow-x: hidden;
+        }
+        
+        /* Fixed Joy plot container */
+        #joy-plot-container {
+            position: fixed !important;
+            bottom: 420px; /* Move above the loss/entropy plots */
+            left: 20px;
+            right: 20px;
+            width: calc(100% - 40px) !important;
+            height: 300px !important;
+            margin: 0 !important;
+            z-index: 1; /* Below other elements */
+            background: transparent; /* Remove background */
+            backdrop-filter: none; /* Remove blur */
+            border-radius: 0;
+            padding: 0;
+            border: none; /* Remove border */
+            pointer-events: none; /* Allow clicks to pass through */
         }
     </style>
 </head>
