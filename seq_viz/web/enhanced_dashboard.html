@@ -724,13 +724,13 @@
             width: calc(100% - 40px) !important;
             height: 300px !important;
             margin: 0 !important;
-            z-index: 1; /* Below other elements */
+            z-index: 3; /* Higher to be interactive */
             background: transparent; /* Remove background */
             backdrop-filter: none; /* Remove blur */
             border-radius: 0;
             padding: 0;
             border: none; /* Remove border */
-            pointer-events: none; /* Allow clicks to pass through */
+            cursor: pointer; /* Show it's clickable */
         }
     </style>
 </head>

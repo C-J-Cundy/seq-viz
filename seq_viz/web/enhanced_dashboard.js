@@ -403,8 +403,90 @@ function interpolateLoss(oldLoss, newLoss, progress, position, totalPositions) {
     return oldLoss + (newLoss - oldLoss) * sigmoid;
 }
 
+// Track visible token range
+let visibleTokenRange = { start: 0, end: 0 };
+
+// Handle clicks on the sparkline plot
+function handleSparklineClick(event) {
+    if (!currentData || !currentData.sequences[selectedSequence]) return;
+    
+    const canvas = event.target;
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const canvasWidth = rect.width;
+    
+    // Calculate which token index was clicked
+    const padding = 40;
+    const plotWidth = canvasWidth - padding * 2;
+    const clickX = x - padding;
+    
+    if (clickX < 0 || clickX > plotWidth) return;
+    
+    const sequence = currentData.sequences[selectedSequence];
+    const totalTokens = sequence.predictions ? sequence.predictions.length : sequence.tokens.length;
+    const tokenIndex = Math.floor((clickX / plotWidth) * totalTokens);
+    
+    // Scroll to the clicked token
+    scrollToToken(tokenIndex);
+}
+
+// Scroll to a specific token index
+function scrollToToken(tokenIndex) {
+    const tokenColumns = document.querySelectorAll('.token-column');
+    if (tokenIndex < 0 || tokenIndex >= tokenColumns.length) return;
+    
+    const targetColumn = tokenColumns[tokenIndex];
+    const scrollContainer = document.querySelector('.sequence-container');
+    
+    if (targetColumn && scrollContainer) {
+        // Calculate the scroll position to center the token
+        const columnRect = targetColumn.getBoundingClientRect();
+        const containerRect = scrollContainer.getBoundingClientRect();
+        const columnCenter = columnRect.left + columnRect.width / 2;
+        const containerCenter = containerRect.left + containerRect.width / 2;
+        const offset = columnCenter - containerCenter;
+        
+        // Smooth scroll to the target position
+        scrollContainer.scrollBy({
+            left: offset,
+            behavior: 'smooth'
+        });
+    }
+}
+
+// Get the currently visible token range
+function updateVisibleTokenRange() {
+    const scrollContainer = document.querySelector('.sequence-container');
+    const tokenColumns = document.querySelectorAll('.token-column');
+    
+    if (!scrollContainer || tokenColumns.length === 0) return;
+    
+    const containerRect = scrollContainer.getBoundingClientRect();
+    const scrollLeft = scrollContainer.scrollLeft;
+    const containerWidth = containerRect.width;
+    
+    // Find first and last visible tokens
+    let firstVisible = -1;
+    let lastVisible = -1;
+    
+    tokenColumns.forEach((column, index) => {
+        const rect = column.getBoundingClientRect();
+        const relativeLeft = rect.left - containerRect.left;
+        const relativeRight = rect.right - containerRect.left;
+        
+        // Check if token is at least partially visible
+        if (relativeRight > 0 && relativeLeft < containerWidth) {
+            if (firstVisible === -1) firstVisible = index;
+            lastVisible = index;
+        }
+    });
+    
+    visibleTokenRange.start = Math.max(0, firstVisible);
+    visibleTokenRange.end = Math.max(0, lastVisible);
+}
+
 // Draw Joy Division style sparkline plot
-function drawJoyPlotSparkline(canvas, allSequences, selectedSeqIndex, animate = true) {
+function drawJoyPlotSparkline(canvas, allSequences, selectedSeqIndex, animate = true, highlightViewport = true) {
     const ctx = canvas.getContext('2d');
     const width = canvas.width;
     const height = canvas.height;
@@ -443,7 +525,7 @@ function drawJoyPlotSparkline(canvas, allSequences, selectedSeqIndex, animate = 
     
     const globalRange = globalMaxLoss - globalMinLoss || 1;
     
-    // Draw sequences from back to front (reverse order)
+    // First pass: Draw all sequences with blue lines and fills
     for (let seqIdx = sequenceCount - 1; seqIdx >= 0; seqIdx--) {
         const sequence = allSequences[seqIdx];
         if (!sequence.predictions || sequence.predictions.length === 0) continue;
@@ -458,7 +540,6 @@ function drawJoyPlotSparkline(canvas, allSequences, selectedSeqIndex, animate = 
             joyPlotAnimation.previousData[seqIdx].predictions) {
             
             const oldLosses = joyPlotAnimation.previousData[seqIdx].predictions.map(pred => pred.loss || 0);
-            
             
             // Interpolate between old and new losses with wave effect
             losses = losses.map((newLoss, idx) => {
@@ -491,7 +572,7 @@ function drawJoyPlotSparkline(canvas, allSequences, selectedSeqIndex, animate = 
             ctx.shadowBlur = 5;
         }
         
-        // Create the path
+        // Draw the entire line
         ctx.beginPath();
         
         losses.forEach((loss, index) => {
@@ -508,11 +589,26 @@ function drawJoyPlotSparkline(canvas, allSequences, selectedSeqIndex, animate = 
         
         ctx.stroke();
         
-        // Fill area under the curve - extend to next sequence
+        // Clear shadow before fill
         ctx.shadowBlur = 0;
+        ctx.shadowColor = 'transparent';
+        
+        // Fill area under the curve - create new path for fill
+        ctx.beginPath();
+        
+        losses.forEach((loss, index) => {
+            const x = padding + (index / (losses.length - 1)) * plotWidth;
+            const normalizedLoss = (loss - globalMinLoss) / globalRange;
+            const y = baseY + waveHeight - (normalizedLoss * waveHeight);
+            
+            if (index === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        });
         
         // Calculate where the fill should extend to
-        // Use consistent gradient height for all sequences
         const gradientHeight = sequenceHeight * 1.5; // Extend gradient 50% beyond the wave height
         const fillBottomY = baseY + gradientHeight;
         
@@ -537,6 +633,74 @@ function drawJoyPlotSparkline(canvas, allSequences, selectedSeqIndex, animate = 
         ctx.lineTo(padding, fillBottomY);
         ctx.closePath();
         ctx.fill();
+    }
+    
+    // Second pass: Draw red highlight for visible portion (completely separate)
+    if (highlightViewport && visibleTokenRange.start >= 0 && visibleTokenRange.end >= 0) {
+        const selectedSequence = allSequences[selectedSeqIndex];
+        if (selectedSequence && selectedSequence.predictions) {
+            // Reset all context state
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.scale(dpr, dpr);
+            
+            // Get the losses for selected sequence
+            let losses = selectedSequence.predictions.map(pred => pred.loss || 0);
+            
+            // Apply animation if needed
+            if (animate && joyPlotAnimation.previousData && 
+                joyPlotAnimation.animationProgress < 1 &&
+                joyPlotAnimation.previousData[selectedSeqIndex] &&
+                joyPlotAnimation.previousData[selectedSeqIndex].predictions) {
+                
+                const oldLosses = joyPlotAnimation.previousData[selectedSeqIndex].predictions.map(pred => pred.loss || 0);
+                losses = losses.map((newLoss, idx) => {
+                    if (idx < oldLosses.length) {
+                        return interpolateLoss(oldLosses[idx], newLoss, 
+                                             joyPlotAnimation.animationProgress, 
+                                             idx, losses.length - 1);
+                    }
+                    return newLoss;
+                });
+            }
+            
+            const baseY = padding + selectedSeqIndex * (sequenceHeight - overlap);
+            const waveHeight = sequenceHeight * 0.8;
+            
+            // Draw glow effect using multiple passes
+            const passes = [
+                { width: 10, alpha: 0.1, blur: 0 },
+                { width: 7, alpha: 0.2, blur: 0 },
+                { width: 5, alpha: 0.3, blur: 0 },
+                { width: 3.5, alpha: 0.6, blur: 0 },
+                { width: 3, alpha: 1, blur: 0 }
+            ];
+            
+            passes.forEach(pass => {
+                ctx.save();
+                ctx.globalAlpha = pass.alpha;
+                ctx.strokeStyle = '#FF0050';
+                ctx.lineWidth = pass.width;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.shadowBlur = pass.blur;
+                ctx.shadowColor = '#FF0050';
+                
+                ctx.beginPath();
+                for (let index = visibleTokenRange.start; index <= Math.min(visibleTokenRange.end + 1, losses.length - 1); index++) {
+                    const x = padding + (index / (losses.length - 1)) * plotWidth;
+                    const normalizedLoss = (losses[index] - globalMinLoss) / globalRange;
+                    const y = baseY + waveHeight - (normalizedLoss * waveHeight);
+                    
+                    if (index === visibleTokenRange.start) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                ctx.stroke();
+                ctx.restore();
+            });
+        }
     }
     
     // Reset transform
@@ -805,11 +969,28 @@ function updateSequenceDisplay(animateJoy = false, previousSequences = null) {
         sparklineCanvas.style.width = '100%';
         sparklineCanvas.style.height = '100%';
         sparklineCanvas.style.display = 'block';
-        sparklineCanvas.style.pointerEvents = 'none'; // Allow clicks to pass through
         
         sparklineContainer.appendChild(sparklineCanvas);
         // Append to body instead of sequence container so it stays fixed
         document.body.appendChild(sparklineContainer);
+        
+        // Add click handler for navigation
+        sparklineCanvas.addEventListener('click', handleSparklineClick);
+    }
+    
+    // Add scroll listener to update viewport highlight
+    const scrollContainer = document.querySelector('.sequence-container');
+    if (scrollContainer) {
+        scrollContainer.addEventListener('scroll', () => {
+            updateVisibleTokenRange();
+            // Redraw sparkline with updated viewport
+            if (currentData && sparklineCanvas) {
+                const rect = sparklineContainer.getBoundingClientRect();
+                if (rect.width > 0) {
+                    drawJoyPlotSparkline(sparklineCanvas, currentData.sequences, selectedSequence, false);
+                }
+            }
+        });
     }
     
     // Set canvas resolution (will be adjusted on resize)
@@ -847,6 +1028,9 @@ function updateSequenceDisplay(animateJoy = false, previousSequences = null) {
                 joyPlotAnimation.previousData = JSON.parse(JSON.stringify(currentData.sequences));
             }
         }
+        
+        // Initialize viewport tracking
+        updateVisibleTokenRange();
     }, 0);
 }
 
