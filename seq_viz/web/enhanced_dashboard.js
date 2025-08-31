@@ -1592,9 +1592,26 @@ updateDashboard = function(data) {
 // Initialize
 connectWebSocket();
 
+// Enable horizontal scrolling with mouse wheel for sequences
+function enableSequenceWheelScroll() {
+    document.addEventListener('wheel', (e) => {
+        // Check if we're hovering over the sequence container or any of its children
+        const sequenceContainer = e.target.closest('.sequence-container');
+        if (sequenceContainer) {
+            // Prevent default vertical scroll
+            e.preventDefault();
+            
+            // Scroll the container horizontally
+            const scrollAmount = e.deltaY * 2; // Multiply for faster scrolling
+            sequenceContainer.scrollLeft += scrollAmount;
+        }
+    }, { passive: false });
+}
+
 // Initialize interactions when DOM is ready
 window.addEventListener('DOMContentLoaded', () => {
     initTooltip();
     initPlotInteractions();
+    enableSequenceWheelScroll();
     console.log('%c⬡ Hexagon Reactor Initialized', 'color: #00D4FF; font-weight: bold');
 });
