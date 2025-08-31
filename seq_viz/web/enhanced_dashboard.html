@@ -497,7 +497,7 @@
         #connection-status {
             position: fixed;
             top: 20px;
-            right: 240px; /* Move left to avoid overlapping with perplexity metric */
+            right: 340px; /* Move further left to avoid overlapping with perplexity metric */
             padding: 8px 16px;
             background: rgba(13, 17, 23, 0.9);
             border: 1px solid #00D4FF;
@@ -805,6 +805,24 @@
     <div id="plot-tooltip" class="plot-tooltip">
         <div class="label"></div>
         <div class="value"></div>
+    </div>
+    
+    <!-- Hexagon Reactor Visualization -->
+    <div id="hexagon-reactor" style="position: fixed; bottom: 60px; left: 50%; transform: translateX(-50%); width: 350px; height: 350px; pointer-events: none; z-index: 100;">
+        <svg width="350" height="350" style="position: absolute; top: 0; left: 0;">
+            <defs>
+                <filter id="glow">
+                    <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+                    <feMerge>
+                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
+            </defs>
+            <g id="hexagon-container" transform="translate(175,175)">
+                <!-- Hexagons will be added here dynamically -->
+            </g>
+        </svg>
     </div>
     
     <script src="enhanced_dashboard.js"></script>

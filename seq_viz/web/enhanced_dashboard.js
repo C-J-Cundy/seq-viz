@@ -1333,6 +1333,262 @@ function initPlotInteractions() {
     }
 }
 
+// Hexagon Reactor Visualization
+class HexagonReactor {
+    constructor() {
+        this.container = document.getElementById('hexagon-container');
+        this.hexagons = [];
+        this.animationFrameId = null;
+    }
+    
+    // Calculate hexagon vertices
+    getHexagonPoints(radius) {
+        const points = [];
+        for (let i = 0; i < 6; i++) {
+            const angle = (Math.PI / 3) * i - Math.PI / 2; // Start from top
+            const x = radius * Math.cos(angle);
+            const y = radius * Math.sin(angle);
+            points.push([x, y]);
+        }
+        return points;
+    }
+    
+    // Create a hexagon for a sequence
+    createHexagon(sequence, index) {
+        const radius = 140 - (index * 35); // Bigger with more spacing between hexagons
+        const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        group.setAttribute('class', `hexagon-group hexagon-${index}`);
+        
+        // Calculate segment size for dividing sequence into 6 parts
+        const segmentSize = Math.max(1, Math.floor(sequence.tokens.length / 6));
+        const rawLogLikelihoods = [];
+        
+        // First pass: calculate raw log likelihoods for each segment
+        for (let i = 0; i < 6; i++) {
+            const startIdx = Math.min(i * segmentSize, sequence.tokens.length - 1);
+            const endIdx = Math.min(startIdx + segmentSize, sequence.tokens.length);
+            let segmentLogLikelihood = 0;
+            let count = 0;
+            
+            // If this segment exists in the sequence
+            if (startIdx < sequence.tokens.length - 1) {
+                // Get predictions for this segment
+                for (let j = startIdx; j < endIdx - 1 && j < sequence.tokens.length - 1; j++) {
+                    if (sequence.predictions && sequence.predictions[j]) {
+                        const pred = sequence.predictions[j];
+                        // Find the probability of the actual next token
+                        const actualToken = sequence.tokens[j + 1];
+                        const tokenPred = pred.top_k ? pred.top_k.find(p => p.token_str === actualToken) : null;
+                        if (tokenPred && tokenPred.prob > 0) {
+                            segmentLogLikelihood += Math.log(tokenPred.prob);
+                            count++;
+                        }
+                    }
+                }
+            }
+            
+            // Average log likelihood for this segment
+            const avgLogLikelihood = count > 0 ? segmentLogLikelihood / count : -10;
+            rawLogLikelihoods.push(avgLogLikelihood);
+        }
+        
+        // Find min and max for this sequence
+        const minLL = Math.min(...rawLogLikelihoods);
+        const maxLL = Math.max(...rawLogLikelihoods);
+        const range = maxLL - minLL;
+        
+        // Second pass: normalize to 0-1 range based on this sequence's min/max
+        const edgeData = [];
+        for (let i = 0; i < 6; i++) {
+            let brightness;
+            if (range > 0.01) {  // If there's meaningful variation
+                brightness = (rawLogLikelihoods[i] - minLL) / range;
+            } else {  // If all segments are roughly equal
+                brightness = 0.5;  // Middle brightness
+            }
+            brightness = Math.max(0.1, Math.min(1, brightness)); // Clamp to [0.1, 1]
+            edgeData.push(brightness);
+            console.log(`Segment ${i}: logLL=${rawLogLikelihoods[i].toFixed(3)}, normalized brightness=${brightness.toFixed(3)}`);
+        }
+        console.log(`Sequence ${index}: min=${minLL.toFixed(3)}, max=${maxLL.toFixed(3)}, range=${range.toFixed(3)}`);
+        
+        // Calculate total average log likelihood for spin speed
+        const totalAvgLogLikelihood = edgeData.reduce((a, b) => a + b, 0) / 6;
+        
+        // Draw hexagon edges
+        const points = this.getHexagonPoints(radius);
+        console.log(`Creating hexagon ${index} with ${points.length} vertices`);
+        console.log('Points:', points);
+        
+        // Try drawing as a polygon path instead
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        let pathData = `M ${points[0][0]} ${points[0][1]}`;
+        for (let i = 1; i < 6; i++) {
+            pathData += ` L ${points[i][0]} ${points[i][1]}`;
+        }
+        pathData += ' Z'; // Close the path
+        
+        path.setAttribute('d', pathData);
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke', '#FF6600');
+        path.setAttribute('stroke-width', '1.5');  // Halfway between 1 and 2
+        // No glow for sharper look
+        path.setAttribute('opacity', '0.22');  // Halfway between 0.15 and 0.3
+        
+        group.appendChild(path);
+        
+        // Draw each edge as a trapezoid with mitered corners
+        const thickness = 8; // Edge thickness
+        const innerRadius = radius - thickness / 2;
+        const outerRadius = radius + thickness / 2;
+        
+        // Get inner and outer hexagon points
+        const innerPoints = this.getHexagonPoints(innerRadius);
+        const outerPoints = this.getHexagonPoints(outerRadius);
+        
+        for (let i = 0; i < 6; i++) {
+            const nextI = (i + 1) % 6;
+            
+            // Create trapezoid for each edge
+            const edge = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            
+            // Four corners of the trapezoid
+            const pathData = `M ${innerPoints[i][0]} ${innerPoints[i][1]} 
+                             L ${outerPoints[i][0]} ${outerPoints[i][1]} 
+                             L ${outerPoints[nextI][0]} ${outerPoints[nextI][1]} 
+                             L ${innerPoints[nextI][0]} ${innerPoints[nextI][1]} Z`;
+            
+            edge.setAttribute('d', pathData);
+            
+            // Set color based on brightness
+            const brightness = edgeData[i] || 0.1;
+            const color = this.getEdgeColor(brightness);
+            edge.setAttribute('fill', color);
+            edge.setAttribute('stroke', 'none');
+            edge.setAttribute('opacity', '0.7');  // Halfway between 0.4 and 1.0
+            
+            group.appendChild(edge);
+        }
+        
+        // No vertices - cleaner cyberpunk look
+        
+        // Store rotation info
+        group.dataset.spinSpeed = totalAvgLogLikelihood * 0.25; // 50% slower rotation
+        group.dataset.currentRotation = 0;
+        
+        return group;
+    }
+    
+    getEdgeColor(brightness) {
+        // Orange-based heat map: deep burgundy → crimson → orange → amber → yellow-white
+        if (brightness < 0.2) {
+            // Deep burgundy/maroon for very low
+            const r = Math.floor(80 + brightness * 200);
+            const g = Math.floor(brightness * 100);
+            const b = Math.floor(20 + brightness * 100);
+            return `rgb(${r}, ${g}, ${b})`;
+        } else if (brightness < 0.4) {
+            // Crimson to deep orange
+            const t = (brightness - 0.2) / 0.2;
+            const r = Math.floor(120 + t * 135);
+            const g = Math.floor(20 + t * 50);
+            const b = Math.floor(40 - t * 40);
+            return `rgb(${r}, ${g}, ${b})`;
+        } else if (brightness < 0.6) {
+            // Deep orange to bright orange
+            const t = (brightness - 0.4) / 0.2;
+            const r = 255;
+            const g = Math.floor(70 + t * 80);
+            const b = 0;
+            return `rgb(${r}, ${g}, ${b})`;
+        } else if (brightness < 0.8) {
+            // Bright orange to amber
+            const t = (brightness - 0.6) / 0.2;
+            const r = 255;
+            const g = Math.floor(150 + t * 40);
+            const b = Math.floor(0 + t * 30);
+            return `rgb(${r}, ${g}, ${b})`;
+        } else {
+            // Amber to yellow-white hot
+            const t = (brightness - 0.8) / 0.2;
+            const r = 255;
+            const g = Math.floor(190 + t * 50);
+            const b = Math.floor(30 + t * 150);
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+    }
+    
+    updateHexagons(sequences) {
+        // Store current rotation states before clearing
+        const previousRotations = {};
+        this.hexagons.forEach((hexagon, index) => {
+            previousRotations[index] = parseFloat(hexagon.dataset.currentRotation) || 0;
+        });
+        
+        // Clear existing hexagons
+        this.container.innerHTML = '';
+        this.hexagons = [];
+        
+        // Create hexagons for up to 4 sequences
+        const maxSequences = Math.min(4, sequences.length);
+        for (let i = 0; i < maxSequences; i++) {
+            const hexagon = this.createHexagon(sequences[i], i);
+            
+            // Restore previous rotation if it existed
+            if (previousRotations[i] !== undefined) {
+                hexagon.dataset.currentRotation = previousRotations[i];
+                hexagon.setAttribute('transform', `rotate(${previousRotations[i]})`);
+            }
+            
+            this.container.appendChild(hexagon);
+            this.hexagons.push(hexagon);
+        }
+        
+        // Start animation if not already running
+        if (!this.animationFrameId) {
+            this.animate();
+        }
+    }
+    
+    animate() {
+        const animateFrame = () => {
+            this.hexagons.forEach(hexagon => {
+                const spinSpeed = parseFloat(hexagon.dataset.spinSpeed);
+                const currentRotation = parseFloat(hexagon.dataset.currentRotation);
+                const newRotation = currentRotation + spinSpeed;
+                
+                hexagon.setAttribute('transform', `rotate(${newRotation})`);
+                hexagon.dataset.currentRotation = newRotation;
+            });
+            
+            this.animationFrameId = requestAnimationFrame(animateFrame);
+        };
+        
+        animateFrame();
+    }
+    
+    stop() {
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = null;
+        }
+    }
+}
+
+// Initialize hexagon reactor
+const hexagonReactor = new HexagonReactor();
+
+// Update the updateDashboard function to update hexagons
+const originalUpdateDashboard = updateDashboard;
+updateDashboard = function(data) {
+    originalUpdateDashboard(data);
+    
+    // Update hexagon visualization if we have sequences
+    if (data.sequences && data.sequences.length > 0) {
+        hexagonReactor.updateHexagons(data.sequences);
+    }
+};
+
 // Initialize
 connectWebSocket();
 
@@ -1340,4 +1596,5 @@ connectWebSocket();
 window.addEventListener('DOMContentLoaded', () => {
     initTooltip();
     initPlotInteractions();
+    console.log('%c⬡ Hexagon Reactor Initialized', 'color: #00D4FF; font-weight: bold');
 });
