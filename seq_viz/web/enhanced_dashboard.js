@@ -41,6 +41,35 @@ let currentData = null;
 let selectedSequence = 0;
 let selectedPosition = 0;
 
+// Glitch controller to coordinate token glitching
+const glitchController = {
+    activeGlitches: new Set(),
+    maxConcurrentGlitches: 1,  // Only 1 token glitching at a time
+    minTimeBetweenGlitches: 3000,  // Minimum 3 seconds between any glitches
+    lastGlitchTime: 0,
+    
+    canStartGlitch: function(tokenPosition) {
+        const now = Date.now();
+        // Check if enough time has passed and we're under the limit
+        return this.activeGlitches.size < this.maxConcurrentGlitches && 
+               (now - this.lastGlitchTime) > this.minTimeBetweenGlitches;
+    },
+    
+    startGlitch: function(tokenPosition) {
+        this.activeGlitches.add(tokenPosition);
+        this.lastGlitchTime = Date.now();
+    },
+    
+    endGlitch: function(tokenPosition) {
+        this.activeGlitches.delete(tokenPosition);
+    },
+    
+    reset: function() {
+        this.activeGlitches.clear();
+        this.lastGlitchTime = 0;
+    }
+};
+
 // History for graphs
 const history = {
     loss: [],
@@ -741,7 +770,7 @@ function animateJoyPlot(canvas, newSequences, selectedSeqIndex) {
 }
 
 // Create token column
-function createTokenColumn(token, predictions, position, isSelected) {
+function createTokenColumn(token, tokenId, predictions, position, isSelected) {
     const column = document.createElement('div');
     column.className = 'token-column';
     
@@ -765,14 +794,67 @@ function createTokenColumn(token, predictions, position, isSelected) {
         }
     }
     
-    tokenEl.textContent = token;
+    // Create text element that will show token or ID
+    const tokenText = document.createElement('div');
+    tokenText.className = 'token-text';
+    tokenText.textContent = token;
+    tokenEl.appendChild(tokenText);
     
     // Scale font size based on token length
     const baseSize = 1.1; // em
     const maxChars = 12; // characters that fit comfortably at base size
     if (token.length > maxChars) {
         const scale = Math.max(0.6, maxChars / token.length);
-        tokenEl.style.fontSize = `${baseSize * scale}em`;
+        tokenText.style.fontSize = `${baseSize * scale}em`;
+    }
+    
+    // Add glitch effect if we have a token ID
+    if (tokenId !== undefined) {
+        // Configuration for glitch timing
+        const config = {
+            initialDelayMin: 5000,
+            initialDelayMax: 20000,  // Much longer initial delay
+            glitchDurationMin: 3000,
+            glitchDurationMax: 4000,
+            nextGlitchMin: 15000,    // Much longer between attempts
+            nextGlitchMax: 30000
+        };
+        
+        const randomInRange = (min, max) => min + Math.random() * (max - min);
+        
+        // Create a unique identifier for this token
+        const tokenKey = `${selectedSequence}-${position}`;
+        
+        const attemptGlitch = () => {
+            // Check if we can start a glitch
+            if (glitchController.canStartGlitch(tokenKey)) {
+                // Start the glitch
+                glitchController.startGlitch(tokenKey);
+                tokenText.classList.add('glitching');
+                tokenText.textContent = `[${tokenId}]`;
+                
+                // Show ID for configured duration
+                const glitchDuration = randomInRange(config.glitchDurationMin, config.glitchDurationMax);
+                
+                setTimeout(() => {
+                    // End the glitch
+                    tokenText.textContent = token;
+                    tokenText.classList.remove('glitching');
+                    glitchController.endGlitch(tokenKey);
+                    
+                    // Schedule next attempt
+                    const nextAttempt = randomInRange(config.nextGlitchMin, config.nextGlitchMax);
+                    setTimeout(attemptGlitch, nextAttempt);
+                }, glitchDuration);
+            } else {
+                // If we can't glitch now, try again later
+                const retryDelay = randomInRange(5000, 10000);
+                setTimeout(attemptGlitch, retryDelay);
+            }
+        };
+        
+        // Start the first attempt after initial delay
+        setTimeout(attemptGlitch, randomInRange(config.initialDelayMin, config.initialDelayMax));
     }
     
     tokenEl.onclick = () => {
@@ -891,6 +973,9 @@ function updateSequenceDisplay(animateJoy = false, previousSequences = null) {
     const sequence = currentData.sequences[selectedSequence];
     if (!sequence) return;
     
+    // Reset glitch controller when updating display
+    glitchController.reset();
+    
     // Find or create sequence container
     let seqContainer = document.querySelector('.sequence-container');
     if (!seqContainer) {
@@ -944,13 +1029,16 @@ function updateSequenceDisplay(animateJoy = false, previousSequences = null) {
     scroll.className = 'sequence-scroll';
     
     sequence.tokens.forEach((token, idx) => {
+        // Get token ID if available
+        const tokenId = sequence.token_ids ? sequence.token_ids[idx] : undefined;
+        
         // Shift predictions by 1: prediction at position i-1 predicts token at position i
         // First token has no predictions (no previous token to predict from)
         let predictions = null;
         if (idx > 0 && sequence.predictions && sequence.predictions[idx - 1]) {
             predictions = sequence.predictions[idx - 1];
         }
-        const column = createTokenColumn(token, predictions, idx, idx === selectedPosition);
+        const column = createTokenColumn(token, tokenId, predictions, idx, idx === selectedPosition);
         scroll.appendChild(column);
     });
     

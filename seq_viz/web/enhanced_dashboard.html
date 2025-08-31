@@ -704,6 +704,34 @@
             animation: data-stream 3s ease-out infinite;
         }
         
+        /* Glitch effect for token IDs */
+        .token-text {
+            display: inline-block;
+            transition: none;
+        }
+        
+        .token-text.glitching {
+            animation: subtle-glitch 0.3s ease-in-out;
+            color: #FF6B6B;
+            text-shadow: 
+                0 0 8px rgba(255, 107, 107, 0.5),
+                0 0 16px rgba(255, 107, 107, 0.3);
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+            opacity: 0.9;
+        }
+        
+        @keyframes subtle-glitch {
+            0%, 100% {
+                transform: translate(0);
+                opacity: 0.9;
+            }
+            50% {
+                transform: translate(0, -1px);
+                opacity: 1;
+            }
+        }
+        
         /* Container z-index */
         .container {
             position: relative;
