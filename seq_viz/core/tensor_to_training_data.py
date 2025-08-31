@@ -52,9 +52,10 @@ def tensor_to_training_entry(
         indices = range(batch_size)
     
     for batch_idx in indices:
-        # Get tokens for this sequence
+        # Get tokens and token IDs for this sequence
+        token_ids_list = input_ids[batch_idx].tolist()
         tokens = [tokenizer.decode(token_id, skip_special_tokens=False) 
-                  for token_id in input_ids[batch_idx]]
+                  for token_id in token_ids_list]
         
         # Process predictions for each position
         predictions = []
@@ -115,6 +116,7 @@ def tensor_to_training_entry(
         
         sequences.append({
             "tokens": tokens,
+            "token_ids": token_ids_list,
             "predictions": predictions
         })
     

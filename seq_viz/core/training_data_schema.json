@@ -26,7 +26,7 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["tokens", "predictions"],
+        "required": ["tokens", "token_ids", "predictions"],
         "properties": {
           "tokens": {
             "type": "array",
@@ -34,6 +34,14 @@
               "type": "string"
             },
             "description": "List of token strings in the sequence"
+          },
+          "token_ids": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "description": "List of token IDs corresponding to the token strings"
           },
           "predictions": {
             "type": "array",
