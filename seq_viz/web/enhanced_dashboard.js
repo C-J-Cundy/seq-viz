@@ -1642,9 +1642,8 @@ function initFilePathDisplay() {
         if (filePathDisplay.contentEditable === 'false') {
             // Enter edit mode
             filePathDisplay.contentEditable = 'true';
-            filePathDisplay.style.background = 'rgba(13, 17, 23, 0.95)';
-            filePathDisplay.style.borderColor = '#FF0080';
-            filePathDisplay.style.boxShadow = '0 0 30px rgba(255, 0, 128, 0.5)';
+            filePathDisplay.style.color = '#00FF88';
+            filePathDisplay.style.textShadow = '0 0 8px rgba(0, 255, 136, 0.7)';
             
             // Select the file path text (not the FILE:// prefix)
             const range = document.createRange();
@@ -1688,9 +1687,8 @@ function initFilePathDisplay() {
     
     function cancelFilePathEdit() {
         filePathDisplay.contentEditable = 'false';
-        filePathDisplay.style.background = 'rgba(13, 17, 23, 0.9)';
-        filePathDisplay.style.borderColor = '#00D4FF';
-        filePathDisplay.style.boxShadow = '0 0 20px rgba(0, 212, 255, 0.3)';
+        filePathDisplay.style.color = '#00FF41';
+        filePathDisplay.style.textShadow = '0 0 5px rgba(0, 255, 65, 0.5)';
         filePathText.textContent = currentFilePath;
     }
 }

@@ -41,15 +41,16 @@
         
         .step-display {
             position: absolute;
-            top: 50%;
+            top: -5px;
             right: 20px;
             transform: translateY(-50%);
             font-family: 'Share Tech Mono', monospace;
             font-size: 1em;
             color: #FFB800;
-            text-transform: lowercase;
+            text-transform: uppercase;
             letter-spacing: 0.05em;
-            opacity: 0.8;
+            opacity: 0.9;
+            text-shadow: 0 0 3px rgba(255, 184, 0, 0.4);
         }
         
         .header h1 {
@@ -773,20 +774,18 @@
         <div id="file-path-display" contenteditable="false" spellcheck="false" style="
             font-family: 'Orbitron', monospace;
             font-size: 0.9em;
-            color: #00D4FF;
-            background: rgba(13, 17, 23, 0.9);
-            border: 1px solid #00D4FF;
+            color: #00FF41;
+            background: transparent;
+            border: none;
             padding: 8px 20px;
-            border-radius: 4px;
             cursor: pointer;
             transition: all 0.3s ease;
             text-transform: uppercase;
             letter-spacing: 2px;
-            backdrop-filter: blur(10px);
             min-width: 400px;
             text-align: center;
             outline: none;
-            box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+            text-shadow: 0 0 5px rgba(0, 255, 65, 0.5);
         ">
             <span id="file-path-text">LOADING...</span>
         </div>
