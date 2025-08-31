@@ -91,6 +91,7 @@ class FileVisualizationServer:
 
                     # Add type field for compatibility with existing dashboard
                     latest_step["type"] = "training_update"
+                    latest_step["file_path"] = str(self.data_file.resolve())
 
                     await self.send_to_all_clients(latest_step)
                     self.last_step_sent = step_num
@@ -114,6 +115,7 @@ class FileVisualizationServer:
 
                 if latest:
                     latest["type"] = "training_update"
+                    latest["file_path"] = str(self.data_file.resolve())
                     await websocket.send(json.dumps(latest))
                     self.last_step_sent = latest.get("step", -1)
 
