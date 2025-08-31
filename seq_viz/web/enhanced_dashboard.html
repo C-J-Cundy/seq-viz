@@ -41,15 +41,16 @@
         
         .step-display {
             position: absolute;
-            top: 50%;
+            top: -5px;
             right: 20px;
             transform: translateY(-50%);
             font-family: 'Share Tech Mono', monospace;
             font-size: 1em;
             color: #FFB800;
-            text-transform: lowercase;
+            text-transform: uppercase;
             letter-spacing: 0.05em;
-            opacity: 0.8;
+            opacity: 0.9;
+            text-shadow: 0 0 3px rgba(255, 184, 0, 0.4);
         }
         
         .header h1 {
@@ -768,7 +769,29 @@
     <div class="scanline"></div>
     <div class="particles-container" id="particles"></div>
     
-    <div class="container">
+    <!-- File path display -->
+    <div id="file-path-container" style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000;">
+        <div id="file-path-display" contenteditable="false" spellcheck="false" style="
+            font-family: 'Orbitron', monospace;
+            font-size: 0.9em;
+            color: #00FF41;
+            background: transparent;
+            border: none;
+            padding: 8px 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            min-width: 400px;
+            text-align: center;
+            outline: none;
+            text-shadow: 0 0 5px rgba(0, 255, 65, 0.5);
+        ">
+            <span id="file-path-text">LOADING...</span>
+        </div>
+    </div>
+    
+    <div class="container" style="margin-top: 80px;">
         <div class="header">
             <h1>llm-trace :: monitoring<span class="loading-dots"></span></h1>
             <div class="step-display">step: <span id="step-value">-</span></div>

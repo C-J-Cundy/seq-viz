@@ -116,6 +116,10 @@ function connectWebSocket() {
             const data = JSON.parse(event.data);
             if (data.type === 'training_update' || data.step !== undefined) {
                 currentData = data;
+                // Update file path display if present
+                if (data.file_path) {
+                    updateFilePathDisplay(data.file_path);
+                }
                 updateDashboard(data);
             }
         } catch (e) {
@@ -1592,9 +1596,108 @@ updateDashboard = function(data) {
 // Initialize
 connectWebSocket();
 
+// Enable horizontal scrolling with mouse wheel for sequences
+function enableSequenceWheelScroll() {
+    document.addEventListener('wheel', (e) => {
+        // Check if we're hovering over the sequence container or any of its children
+        const sequenceContainer = e.target.closest('.sequence-container');
+        if (sequenceContainer) {
+            // Prevent default vertical scroll
+            e.preventDefault();
+            
+            // Scroll the container horizontally
+            const scrollAmount = e.deltaY * 2; // Multiply for faster scrolling
+            sequenceContainer.scrollLeft += scrollAmount;
+        }
+    }, { passive: false });
+}
+
+// File path management
+let currentFilePath = 'shakespeare_lora_training.jsonl'; // Default file
+
+function updateFilePathDisplay(filePath) {
+    const filePathText = document.getElementById('file-path-text');
+    if (filePathText && filePath) {
+        currentFilePath = filePath;
+        filePathText.textContent = filePath;
+    }
+}
+
+function initFilePathDisplay() {
+    const filePathDisplay = document.getElementById('file-path-display');
+    const filePathText = document.getElementById('file-path-text');
+    
+    // Get file from URL params if available
+    const urlParams = new URLSearchParams(window.location.search);
+    const fileParam = urlParams.get('file');
+    if (fileParam) {
+        currentFilePath = fileParam;
+    }
+    
+    // Update display
+    filePathText.textContent = currentFilePath;
+    
+    // Make editable on click
+    filePathDisplay.addEventListener('click', () => {
+        if (filePathDisplay.contentEditable === 'false') {
+            // Enter edit mode
+            filePathDisplay.contentEditable = 'true';
+            filePathDisplay.style.color = '#00FF88';
+            filePathDisplay.style.textShadow = '0 0 8px rgba(0, 255, 136, 0.7)';
+            
+            // Select the file path text (not the FILE:// prefix)
+            const range = document.createRange();
+            range.selectNodeContents(filePathText);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+        }
+    });
+    
+    // Handle Enter key to submit
+    filePathDisplay.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            submitFilePath();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            cancelFilePathEdit();
+        }
+    });
+    
+    // Handle blur (clicking away)
+    filePathDisplay.addEventListener('blur', () => {
+        if (filePathDisplay.contentEditable === 'true') {
+            cancelFilePathEdit();
+        }
+    });
+    
+    function submitFilePath() {
+        const newPath = filePathText.textContent.trim();
+        if (newPath && newPath !== currentFilePath) {
+            currentFilePath = newPath;
+            // Update URL and reload with new file
+            const url = new URL(window.location);
+            url.searchParams.set('file', newPath);
+            window.location = url.toString();
+        } else {
+            cancelFilePathEdit();
+        }
+    }
+    
+    function cancelFilePathEdit() {
+        filePathDisplay.contentEditable = 'false';
+        filePathDisplay.style.color = '#00FF41';
+        filePathDisplay.style.textShadow = '0 0 5px rgba(0, 255, 65, 0.5)';
+        filePathText.textContent = currentFilePath;
+    }
+}
+
 // Initialize interactions when DOM is ready
 window.addEventListener('DOMContentLoaded', () => {
     initTooltip();
     initPlotInteractions();
+    enableSequenceWheelScroll();
+    initFilePathDisplay();
     console.log('%c⬡ Hexagon Reactor Initialized', 'color: #00D4FF; font-weight: bold');
 });
