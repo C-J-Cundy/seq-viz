@@ -234,15 +234,49 @@ python run_server.py --file experiments/run1.jsonl
 
 ## Testing
 
+### Running Tests
+
+```bash
+# Install test dependencies
+pip install -e ".[dev]"
+
+# Run all tests
+pytest tests/
+
+# Run with verbose output
+pytest tests/ -v
+
+# Run specific test file
+pytest tests/test_integration.py
+
+# Run specific test
+pytest tests/test_integration.py::test_pipeline_with_real_llama_model
+
+# Run with coverage report
+pytest tests/ --cov=seq_viz --cov-report=html
+```
+
+### Test Structure
+
+The test suite includes:
+- **Unit Tests** (30 tests): Core functionality testing
+  - `test_tensor_to_training_data.py`: Tensor conversion
+  - `test_data_writer.py`: JSONL writing and validation
+  - `test_data_reader.py`: Data reading and statistics
+- **Integration Tests** (6 tests): End-to-end pipeline testing
+  - `test_integration.py`: Full pipeline, HuggingFace Trainer, real models
+
+### Manual Testing
+
 ```bash
 # Validate data format
 python -m seq_viz.core.validate_training_data training_data.jsonl
 
-# Test tensor conversion
-python test_tensor_conversion.py
+# Generate sample data for testing
+python examples/generate_sample_data.py --steps 10
 
-# Test file server with live updates
-python test_file_server.py
+# Test visualization with sample data
+python run_server.py --file examples/sample.jsonl
 ```
 
 ## Visualization Features
