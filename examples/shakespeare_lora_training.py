@@ -23,7 +23,7 @@ from transformers import (AutoModelForCausalLM, AutoTokenizer,
 
 def download_shakespeare():
     """Download Shakespeare text if not already present."""
-    shakespeare_path = Path("shakespeare.txt")
+    shakespeare_path = Path("examples/shakespeare.txt")
 
     if not shakespeare_path.exists():
         print("Downloading Shakespeare text...")
@@ -209,7 +209,7 @@ def main():
     print(
         "1. In another terminal: python run_server.py --file shakespeare_lora_training.jsonl"
     )
-    print("2. Open seq_viz/web/enhanced_dashboard.html in your browser")
+    print("2. Open seq_viz/web/dashboard.html in your browser")
     print("\nTraining will start in a moment...\n")
 
     # Train

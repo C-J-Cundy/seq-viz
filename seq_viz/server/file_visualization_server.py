@@ -77,7 +77,7 @@ class FileVisualizationServer:
         """Monitor the data file for new entries and send updates."""
         print(f"Monitoring {self.data_file} for updates...")
         print(
-            "Open file:///Users/chris/Documents/FAR/Projects/f/seq-viz/seq_viz/web/enhanced_dashboard.html"
+            "Open file:///Users/chris/Documents/FAR/Projects/f/seq-viz/seq_viz/web/dashboard.html"
         )
 
         while True:

@@ -23,14 +23,17 @@ The system consists of:
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/C-J-Cundy/seq-viz
 cd seq-viz
 
-# Install dependencies
-pip install torch transformers jsonschema websockets
+# Install the package
+pip install -e .
 
-# For HuggingFace integration examples
-pip install trl datasets
+# For running examples (optional)
+pip install -e ".[examples]"
+
+# For development (optional)
+pip install -e ".[dev]"
 ```
 
 ## Quick Start
@@ -70,13 +73,17 @@ writer.write_step(entry)
 ### 2. Start Visualization Server
 
 ```bash
+# Using the installed command
+seq-viz-server --file training_data.jsonl
+
+# Or using the Python script
 python run_server.py --file training_data.jsonl
 ```
 
 ### 3. Open Dashboard
 
 ```bash
-open seq_viz/web/enhanced_dashboard.html
+open seq_viz/web/dashboard.html
 ```
 
 ## HuggingFace Integration
@@ -167,7 +174,7 @@ Training data is stored in JSONL format with the following structure:
 - Streams updates to connected clients
 - Configurable update intervals
 
-#### 5. Enhanced Dashboard (`enhanced_dashboard.html/js`)
+#### 5. Dashboard (`dashboard.html/js`)
 - Interactive token visualization
 - Probability distribution charts
 - Real-time metric graphs
@@ -260,7 +267,7 @@ python test_file_server.py
 ### Adding New Features
 
 1. **New Data Fields**: Update `training_data_schema.json`
-2. **New Visualizations**: Modify `enhanced_dashboard.js`
+2. **New Visualizations**: Modify `dashboard.js`
 3. **New Processing**: Extend `tensor_to_training_data.py`
 
 ### File Structure
@@ -280,9 +287,8 @@ seq-viz/
 │   │   ├── __init__.py
 │   │   └── file_visualization_server.py # File monitoring server
 │   └── web/                    # Web visualization files
-│       ├── enhanced_dashboard.html     # Main visualization interface
-│       ├── enhanced_dashboard.js       # Dashboard logic
-│       └── simple_dashboard.html       # Simple dashboard
+│       ├── dashboard.html              # Main visualization interface
+│       └── dashboard.js                # Dashboard logic
 ├── tests/                      # Test files
 │   ├── test_tensor_conversion.py
 │   ├── test_file_server.py

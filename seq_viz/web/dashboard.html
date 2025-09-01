@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>llm-trace</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Share+Tech+Mono&family=JetBrains+Mono:wght@300;400&family=Fira+Code:wght@400&display=swap');
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 300;
+            background: #0A0E1B;
+            color: #e0e0e0;
+            overflow-x: hidden;
+            line-height: 1.5;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            padding: 0;
+            width: 100%;
+            margin: 0;
+        }
+        
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            margin-top: 120px;
+            position: relative;
+        }
+        
+        .step-display {
+            position: absolute;
+            top: -5px;
+            right: 20px;
+            transform: translateY(-50%);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 1em;
+            color: #FFB800;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            opacity: 0.9;
+            text-shadow: 0 0 3px rgba(255, 184, 0, 0.4);
+        }
+        
+        .header h1 {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 2.5em;
+            font-weight: 400;
+            text-transform: lowercase;
+            letter-spacing: 0.05em;
+            color: #00D4FF;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+        }
+        
+        .loading-dots {
+            display: inline-block;
+            width: 30px;
+            text-align: left;
+        }
+        
+        .loading-dots::after {
+            content: '';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+        
+        @keyframes dots {
+            0% { content: ''; }
+            25% { content: '.'; }
+            50% { content: '..'; }
+            75% { content: '...'; }
+            100% { content: ''; }
+        }
+        
+        /* Metrics */
+        .metrics {
+            position: fixed;
+            top: 20px;
+            z-index: 15; /* Higher z-index to ensure visibility */
+        }
+        
+        .metrics.left {
+            left: 20px;
+        }
+        
+        .metrics.right {
+            right: 20px;
+        }
+        
+        .metric-box {
+            background: rgba(13, 17, 23, 0.9);
+            border: 2px solid #00D4FF;
+            border-radius: 16px;
+            padding: 24px 40px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.3), inset 0 0 30px rgba(0, 212, 255, 0.1);
+            min-width: 200px;
+        }
+        
+        .metric-box:hover {
+            border-color: #FF0080;
+            box-shadow: 0 0 30px rgba(255, 0, 128, 0.4), inset 0 0 20px rgba(255, 0, 128, 0.1);
+        }
+        
+        .metric-label {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.85em;
+            color: #00D4FF;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 400;
+        }
+        
+        .metric-value {
+            font-family: 'Fira Code', monospace;
+            font-size: 3em;
+            font-weight: 400;
+            color: #00FF88;
+            margin-top: 8px;
+            text-shadow: 0 0 15px rgba(0, 255, 136, 0.5);
+        }
+        
+        .metric-graph {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            opacity: 0.5;
+        }
+        
+        /* Minimalist Background Plots */
+        .plot-loss {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 800px;
+            height: 400px;
+            z-index: 1;
+            opacity: 0.6;
+        }
+        
+        .plot-entropy {
+            position: fixed;
+            bottom: 0;
+            right: 0;
+            width: 800px;
+            height: 400px;
+            z-index: 1;
+            opacity: 0.6;
+        }
+        
+        .plot-label {
+            position: fixed;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 1.2em;
+            color: rgba(0, 212, 255, 0.3);
+            text-transform: lowercase;
+            letter-spacing: 0.15em;
+            z-index: 2;
+        }
+        
+        .plot-label.loss {
+            bottom: 20px;
+            left: 40px;
+        }
+        
+        .plot-label.entropy {
+            bottom: 20px;
+            right: 40px;
+        }
+        
+        /* Plot tooltip */
+        .plot-tooltip {
+            position: fixed;
+            background: rgba(13, 17, 23, 0.95);
+            border: 1px solid rgba(0, 212, 255, 0.5);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85em;
+            color: #00D4FF;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            z-index: 1000;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+        }
+        
+        .plot-tooltip.visible {
+            opacity: 1;
+        }
+        
+        .plot-tooltip .label {
+            color: rgba(0, 212, 255, 0.7);
+            font-size: 0.9em;
+            margin-bottom: 2px;
+        }
+        
+        .plot-tooltip .value {
+            color: #00FF88;
+            font-weight: 400;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+        
+        .plot-tooltip.entropy .value {
+            color: #a78bfa;
+            text-shadow: 0 0 10px rgba(167, 139, 250, 0.5);
+        }
+        
+        /* Sequence visualization */
+        .sequence-container {
+            background: transparent;
+            border: none;
+            border-radius: 0;
+            padding: 24px 0;
+            overflow-x: auto;
+            margin-bottom: 20px;
+            width: 100%;
+            padding-top: 140px; /* Increased to match new header position */
+        }
+        
+        .sequence-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 0 20px;
+            position: fixed;
+            top: 220px; /* Moved down to avoid overlapping with title */
+            left: 0;
+            right: 0;
+            background: transparent;
+            backdrop-filter: none;
+            z-index: 10; /* Higher z-index to ensure it's above everything */
+            padding-top: 15px;
+            padding-bottom: 15px;
+            /* Removed border-bottom for cleaner look */
+        }
+        
+        .sequence-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.2em;
+            font-weight: 700;
+            color: #00D4FF;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .sequence-controls {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .sequence-button {
+            padding: 6px 12px;
+            background: rgba(13, 17, 23, 0.9);
+            border: 1px solid #00D4FF;
+            border-radius: 6px;
+            color: #00D4FF;
+            font-size: 0.85em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'Share Tech Mono', monospace;
+            text-transform: uppercase;
+        }
+        
+        .sequence-button:hover {
+            background: rgba(0, 212, 255, 0.2);
+            color: #fff;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+        }
+        
+        .sequence-button.active {
+            background: rgba(255, 0, 128, 0.2);
+            border-color: #FF0080;
+            color: #FF0080;
+            box-shadow: 0 0 20px rgba(255, 0, 128, 0.5);
+        }
+        
+        .sequence-scroll {
+            display: flex;
+            gap: 16px;
+            padding-bottom: 10px;
+            padding-left: 20px;
+            padding-right: 20px;
+            min-width: min-content;
+            margin-bottom: 350px; /* Make room for fixed sparkline */
+        }
+        
+        .token-column {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 140px;
+        }
+        
+        .current-token {
+            font-family: 'Fira Code', monospace;
+            font-size: 1.1em;
+            font-weight: 400;
+            padding: 8px;
+            background: rgba(13, 17, 23, 0.9);
+            border: 1px solid #00D4FF;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            color: #00FF88;
+            text-align: center;
+            height: 50px;
+            width: 140px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
+        }
+        
+        .current-token:hover {
+            background: rgba(0, 212, 255, 0.1);
+            border-color: #FF0080;
+            box-shadow: 0 0 25px rgba(255, 0, 128, 0.5);
+        }
+        
+        .current-token.selected {
+            background: rgba(255, 0, 128, 0.2);
+            border-color: #FF0080;
+            box-shadow: 0 0 30px rgba(255, 0, 128, 0.6);
+        }
+        
+        .predictions-container {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            border-radius: 8px;
+            padding: 8px;
+            position: relative;
+        }
+        
+        /* Entropy visualization */
+        .entropy-box {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            padding: 8px;
+            margin-bottom: 8px;
+            position: relative;
+            height: 50px;
+            cursor: help;
+        }
+        
+        .entropy-clock {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        
+        .entropy-clock svg {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .entropy-clock-face {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.1);
+            stroke-width: 1.5;
+        }
+        
+        .entropy-clock-hand {
+            stroke: #a78bfa;
+            stroke-width: 2;
+            stroke-linecap: round;
+        }
+        
+        .entropy-clock-center {
+            fill: #a78bfa;
+        }
+        
+        .entropy-value {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.8em;
+            font-family: 'JetBrains Mono', monospace;
+            color: #a78bfa;
+            font-weight: 600;
+        }
+        
+        /* Mini probability chart */
+        .mini-chart {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 20px;
+            display: flex;
+            align-items: flex-end;
+            gap: 1px;
+            padding: 0 8px 4px;
+            pointer-events: none;
+        }
+        
+        .mini-bar {
+            flex: 1;
+            background: rgba(0, 212, 255, 0.4);
+            min-height: 1px;
+            transition: all 0.2s ease;
+            box-shadow: 0 0 3px rgba(0, 212, 255, 0.6);
+        }
+        
+        .mini-bar.ground-truth {
+            background: #00FF88;
+            box-shadow: 0 0 5px rgba(0, 255, 136, 0.8);
+        }
+        
+        /* Predictions */
+        .prediction-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 6px;
+            position: relative;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .prediction-bar-bg {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            background: linear-gradient(90deg, rgba(0, 212, 255, 0.2), rgba(0, 212, 255, 0.05));
+            transition: width 0.3s ease;
+        }
+        
+        .prediction-content {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            padding: 6px 8px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .prediction-rank {
+            font-size: 0.8em;
+            color: #00D4FF;
+            margin-right: 8px;
+            font-family: 'Share Tech Mono', monospace;
+            min-width: 20px;
+            opacity: 0.7;
+        }
+        
+        .prediction-token {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9em;
+            flex: 1;
+            color: #e0e0e0;
+            margin-right: 8px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .prediction-prob {
+            font-size: 0.8em;
+            color: #FFB800;
+            font-family: 'Share Tech Mono', monospace;
+            opacity: 0.8;
+        }
+        
+        .ground-truth .prediction-bar-bg {
+            background: linear-gradient(90deg, rgba(0, 255, 136, 0.3), rgba(0, 255, 136, 0.1));
+        }
+        
+        .ground-truth .prediction-token {
+            color: #00FF88;
+            font-weight: 400;
+            text-shadow: 0 0 5px rgba(0, 255, 136, 0.5);
+        }
+        
+        /* Connection status */
+        #connection-status {
+            position: fixed;
+            top: 20px;
+            right: 340px; /* Move further left to avoid overlapping with perplexity metric */
+            padding: 8px 16px;
+            background: rgba(13, 17, 23, 0.9);
+            border: 1px solid #00D4FF;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-family: 'Share Tech Mono', monospace;
+            text-transform: uppercase;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+            z-index: 15; /* Ensure visibility */
+        }
+        
+        .connected {
+            color: #00FF88;
+            border-color: #00FF88;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+        }
+        
+        .disconnected {
+            color: #FF0040;
+            border-color: #FF0040;
+            box-shadow: 0 0 20px rgba(255, 0, 64, 0.5);
+        }
+        
+        /* Loading animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #00D4FF;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Hide scrollbar but keep scrolling functionality */
+        .sequence-container {
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE and Edge */
+        }
+        
+        .sequence-container::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
+        }
+        
+        /* Additional cyberpunk effects */
+        @keyframes glow {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+        
+        .header h1 {
+            animation: glow 2s ease-in-out infinite;
+        }
+        
+        /* Animated scan line */
+        @keyframes scanline {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100vh); }
+        }
+        
+        .scanline {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(0, 212, 255, 0.2) 45%, 
+                rgba(0, 212, 255, 0.4) 50%, 
+                rgba(0, 212, 255, 0.2) 55%, 
+                transparent 100%
+            );
+            animation: scanline 8s linear infinite;
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        /* Background grid */
+        .grid-background {
+            position: fixed;
+            top: -50px;
+            left: -50px;
+            width: calc(100% + 100px);
+            height: calc(100% + 100px);
+            background-image: 
+                linear-gradient(rgba(0, 212, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 212, 255, 0.05) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: grid-scroll 20s linear infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        @keyframes grid-scroll {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+        
+        /* Floating particles */
+        .particles-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            border-radius: 50%;
+            opacity: 0;
+            animation: float-up 15s linear infinite;
+        }
+        
+        @keyframes float-up {
+            0% {
+                transform: translateY(100vh) translateX(0);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100px) translateX(20px);
+                opacity: 0;
+            }
+        }
+        
+        .particle.cyan {
+            background: #00D4FF;
+            box-shadow: 0 0 6px #00D4FF;
+        }
+        
+        .particle.magenta {
+            background: #FF0080;
+            box-shadow: 0 0 6px #FF0080;
+        }
+        
+        .particle.green {
+            background: #00FF88;
+            box-shadow: 0 0 6px #00FF88;
+        }
+        
+        /* Data stream effect */
+        @keyframes data-stream {
+            0% {
+                opacity: 0;
+                transform: translateY(0);
+            }
+            10% {
+                opacity: 0.3;
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(100px);
+            }
+        }
+        
+        .data-stream {
+            position: absolute;
+            width: 1px;
+            height: 40px;
+            background: linear-gradient(to bottom, 
+                rgba(0, 212, 255, 0.4), 
+                transparent
+            );
+            animation: data-stream 2s ease-out infinite;
+            pointer-events: none;
+        }
+        
+        /* High probability tokens get data streams */
+        .current-token {
+            position: relative;
+            overflow: visible;
+        }
+        
+        .current-token.high-prob::after {
+            content: "";
+            position: absolute;
+            bottom: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 1px;
+            height: 30px;
+            background: linear-gradient(to bottom, 
+                rgba(0, 255, 136, 0.6), 
+                transparent
+            );
+            animation: data-stream 3s ease-out infinite;
+        }
+        
+        /* Glitch effect for token IDs */
+        .token-text {
+            display: inline-block;
+            transition: none;
+        }
+        
+        .token-text.glitching {
+            animation: subtle-glitch 0.3s ease-in-out;
+            color: #FF6B6B;
+            text-shadow: 
+                0 0 8px rgba(255, 107, 107, 0.5),
+                0 0 16px rgba(255, 107, 107, 0.3);
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+            opacity: 0.9;
+        }
+        
+        @keyframes subtle-glitch {
+            0%, 100% {
+                transform: translate(0);
+                opacity: 0.9;
+            }
+            50% {
+                transform: translate(0, -1px);
+                opacity: 1;
+            }
+        }
+        
+        /* Container z-index */
+        .container {
+            position: relative;
+            z-index: 2;
+        }
+        
+        body {
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        /* Fixed Joy plot container */
+        #joy-plot-container {
+            position: fixed !important;
+            bottom: 420px; /* Move above the loss/entropy plots */
+            left: 20px;
+            right: 20px;
+            width: calc(100% - 40px) !important;
+            height: 300px !important;
+            margin: 0 !important;
+            z-index: 3; /* Higher to be interactive */
+            background: transparent; /* Remove background */
+            backdrop-filter: none; /* Remove blur */
+            border-radius: 0;
+            padding: 0;
+            border: none; /* Remove border */
+            cursor: pointer; /* Show it's clickable */
+        }
+    </style>
+</head>
+<body>
+    <!-- Visual effects layers -->
+    <div class="grid-background"></div>
+    <div class="scanline"></div>
+    <div class="particles-container" id="particles"></div>
+    
+    <!-- File path display -->
+    <div id="file-path-container" style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000;">
+        <div id="file-path-display" contenteditable="false" spellcheck="false" style="
+            font-family: 'Orbitron', monospace;
+            font-size: 0.9em;
+            color: #00FF41;
+            background: transparent;
+            border: none;
+            padding: 8px 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            min-width: 400px;
+            text-align: center;
+            outline: none;
+            text-shadow: 0 0 5px rgba(0, 255, 65, 0.5);
+        ">
+            <span id="file-path-text">LOADING...</span>
+        </div>
+    </div>
+    
+    <div class="container" style="margin-top: 80px;">
+        <div class="header">
+            <h1>llm-trace :: monitoring<span class="loading-dots"></span></h1>
+            <div class="step-display">step: <span id="step-value">-</span></div>
+        </div>
+        
+        <div class="metrics left">
+            <div class="metric-box">
+                <div class="metric-label">Loss</div>
+                <div class="metric-value" id="loss-value">-</div>
+            </div>
+        </div>
+        
+        <div class="metrics right">
+            <div class="metric-box">
+                <div class="metric-label">Perplexity</div>
+                <div class="metric-value" id="perplexity-value">-</div>
+            </div>
+        </div>
+        
+        <div id="sequences-container"></div>
+    </div>
+    
+    <!-- Minimalist background plots -->
+    <canvas id="loss-plot" class="plot-loss" width="800" height="400"></canvas>
+    <canvas id="entropy-plot" class="plot-entropy" width="800" height="400"></canvas>
+    <div class="plot-label loss">loss</div>
+    <div class="plot-label entropy">entropy</div>
+    
+    <div id="connection-status" class="disconnected">
+        <span id="status-text">Disconnected</span>
+    </div>
+    
+    <!-- Plot tooltip -->
+    <div id="plot-tooltip" class="plot-tooltip">
+        <div class="label"></div>
+        <div class="value"></div>
+    </div>
+    
+    <!-- Hexagon Reactor Visualization -->
+    <div id="hexagon-reactor" style="position: fixed; bottom: 60px; left: 50%; transform: translateX(-50%); width: 350px; height: 350px; pointer-events: none; z-index: 100;">
+        <svg width="350" height="350" style="position: absolute; top: 0; left: 0;">
+            <defs>
+                <filter id="glow">
+                    <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+                    <feMerge>
+                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
+            </defs>
+            <g id="hexagon-container" transform="translate(175,175)">
+                <!-- Hexagons will be added here dynamically -->
+            </g>
+        </svg>
+    </div>
+    
+    <script src="dashboard.js"></script>
+</body>
+</html>
