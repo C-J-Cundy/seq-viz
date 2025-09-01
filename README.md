@@ -23,14 +23,17 @@ The system consists of:
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/C-J-Cundy/seq-viz
 cd seq-viz
 
-# Install dependencies
-pip install torch transformers jsonschema websockets
+# Install the package
+pip install -e .
 
-# For HuggingFace integration examples
-pip install trl datasets
+# For running examples (optional)
+pip install -e ".[examples]"
+
+# For development (optional)
+pip install -e ".[dev]"
 ```
 
 ## Quick Start
@@ -70,6 +73,10 @@ writer.write_step(entry)
 ### 2. Start Visualization Server
 
 ```bash
+# Using the installed command
+seq-viz-server --file training_data.jsonl
+
+# Or using the Python script
 python run_server.py --file training_data.jsonl
 ```
 
