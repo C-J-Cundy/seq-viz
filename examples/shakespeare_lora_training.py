@@ -23,7 +23,7 @@ from transformers import (AutoModelForCausalLM, AutoTokenizer,
 
 def download_shakespeare():
     """Download Shakespeare text if not already present."""
-    shakespeare_path = Path("shakespeare.txt")
+    shakespeare_path = Path("examples/shakespeare.txt")
 
     if not shakespeare_path.exists():
         print("Downloading Shakespeare text...")

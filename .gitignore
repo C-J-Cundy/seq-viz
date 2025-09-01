@@ -7,9 +7,28 @@ __pycache__/
 env/
 venv/
 .venv/
+.mypy_cache/
 
-# Data
-shakespeare.txt
+# Training outputs and generated files
+*.jsonl
+shakespeare_lora_model/
+shakespeare_lora_output/
+*_output/
+*_model/
+
+# Test files
+test_*.py
+test_*.html
+test_*.jsonl
+
+# Performance and debugging files
+PERFORMANCE_IMPROVEMENTS.md
+performance_*.js
+*_profiler.js
+
+# Data files in examples
+examples/shakespeare.txt
+examples/*.jsonl
 
 # IDE
 .vscode/
