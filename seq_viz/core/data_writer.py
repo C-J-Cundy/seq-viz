@@ -14,12 +14,13 @@ class TrainingDataWriter:
         self.output_file = Path(output_file)
         self.schema = load_schema(schema_path)
 
-    def write_step(self, step_data: Dict[str, Any]) -> bool:
+    def write_step(self, step_data: Dict[str, Any]) -> None:
         """
         Write a training step to file after validation.
 
-        Returns:
-            True if write was successful, False otherwise
+        Raises:
+            ValueError: If step_data fails schema validation
+            IOError: If writing to file fails
         """
         print("writing step")
         # Add timestamp if not present
@@ -30,13 +31,10 @@ class TrainingDataWriter:
         is_valid, error_msg = validate_training_entry(step_data, self.schema)
 
         if not is_valid:
-            print(f"Validation error: {error_msg}")
-            return False
+            raise ValueError(f"Validation error: {error_msg}")
 
         # Write to file
         local_rank = int(os.environ.get("LOCAL_RANK", "0"))
         if local_rank == 0:
             with open(self.output_file, "a") as f:
                 f.write(json.dumps(step_data) + "\n")
-
-        return True
