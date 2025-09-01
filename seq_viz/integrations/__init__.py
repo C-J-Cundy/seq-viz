@@ -1,5 +1,5 @@
 """Integration modules for seq-viz with external frameworks."""
 
-from .huggingface_callback import VisualizationCallback
+from .compute_metrics_integration import SeqVizIntegration, create_seq_viz_integration
 
-__all__ = ["VisualizationCallback"]
+__all__ = ["SeqVizIntegration", "create_seq_viz_integration"]

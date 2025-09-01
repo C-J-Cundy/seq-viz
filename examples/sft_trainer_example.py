@@ -1,5 +1,5 @@
 """
-Example of using VisualizationCallback with SFTTrainer.
+Example of using seq-viz integration with SFTTrainer.
 
 This demonstrates how to integrate the sequence visualizer with
 HuggingFace's SFTTrainer for supervised fine-tuning.
@@ -15,8 +15,8 @@ from transformers import (
 )
 from trl import SFTTrainer
 
-# Import our visualization callback
-from seq_viz.integrations import VisualizationCallback
+# Import our visualization integration
+from seq_viz.integrations import create_seq_viz_integration
 
 
 def main():
@@ -67,14 +67,15 @@ def main():
         report_to="none",  # Disable wandb/tensorboard for this example
     )
     
-    # Create visualization callback
-    viz_callback = VisualizationCallback(
+    # Create visualization integration
+    callback, compute_metrics = create_seq_viz_integration(
         output_file="sft_training_viz.jsonl",
-        max_sequences_per_eval=4,  # Visualize 4 sequences per evaluation
         tokenizer=tokenizer,
+        max_sequences_per_eval=4,  # Visualize 4 sequences per evaluation
+        model_name=model_name
     )
     
-    # Create trainer with visualization callback
+    # Create trainer with visualization
     trainer = SFTTrainer(
         model=model,
         args=training_args,
@@ -82,7 +83,8 @@ def main():
         eval_dataset=tokenized_dataset[:20],  # Small eval set
         tokenizer=tokenizer,
         data_collator=DataCollatorForLanguageModeling(tokenizer, mlm=False),
-        callbacks=[viz_callback],
+        callbacks=[callback],
+        compute_metrics=compute_metrics,
     )
     
     # Start training

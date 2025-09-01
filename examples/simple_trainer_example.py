@@ -1,5 +1,5 @@
 """
-Example of using VisualizationCallback with standard Trainer.
+Example of using seq-viz integration with standard Trainer.
 
 This demonstrates how to integrate the sequence visualizer with
 HuggingFace's standard Trainer for language modeling.
@@ -15,8 +15,8 @@ from transformers import (
     DataCollatorForLanguageModeling
 )
 
-# Import our visualization callback
-from seq_viz.integrations import VisualizationCallback
+# Import our visualization integration
+from seq_viz.integrations import create_seq_viz_integration
 
 
 def main():
@@ -76,29 +76,8 @@ def main():
         report_to="none",
     )
     
-    # Create visualization callback
-    viz_callback = VisualizationCallback(
-        output_file="trainer_viz.jsonl",
-        max_sequences_per_eval=4,
-        tokenizer=tokenizer,
-    )
-    
-    # Create trainer
-    trainer = Trainer(
-        model=model,
-        args=training_args,
-        train_dataset=train_dataset,
-        eval_dataset=eval_dataset,
-        tokenizer=tokenizer,
-        data_collator=DataCollatorForLanguageModeling(
-            tokenizer=tokenizer,
-            mlm=False,
-        ),
-        callbacks=[viz_callback],
-    )
-    
-    # Custom compute metrics (optional)
-    def compute_metrics(eval_pred):
+    # Optional: Define custom compute metrics
+    def custom_compute_metrics(eval_pred):
         # This is just an example - you can compute any metrics you want
         predictions, labels = eval_pred
         # Simple accuracy-like metric
@@ -117,8 +96,30 @@ def main():
         
         return {"accuracy": accuracy}
     
-    # Optionally set compute_metrics
-    # trainer.compute_metrics = compute_metrics
+    # Create visualization integration
+    # Pass existing_compute_metrics if you have custom metrics
+    callback, compute_metrics = create_seq_viz_integration(
+        output_file="trainer_viz.jsonl",
+        tokenizer=tokenizer,
+        max_sequences_per_eval=4,
+        model_name=model_name,
+        # existing_compute_metrics=custom_compute_metrics  # Uncomment to use custom metrics
+    )
+    
+    # Create trainer
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        train_dataset=train_dataset,
+        eval_dataset=eval_dataset,
+        tokenizer=tokenizer,
+        data_collator=DataCollatorForLanguageModeling(
+            tokenizer=tokenizer,
+            mlm=False,
+        ),
+        callbacks=[callback],
+        compute_metrics=compute_metrics,
+    )
     
     # Start training
     print("\nStarting training with visualization...")

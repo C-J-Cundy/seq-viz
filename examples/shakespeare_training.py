@@ -21,8 +21,8 @@ from transformers import (
 )
 from datasets import Dataset
 
-# Import our visualization callback
-from seq_viz.integrations import VisualizationCallback
+# Import our visualization integration
+from seq_viz.integrations import create_seq_viz_integration
 
 
 def download_shakespeare():
@@ -146,11 +146,12 @@ def main():
         gradient_accumulation_steps=2,  # Accumulate gradients
     )
     
-    # Create visualization callback
-    viz_callback = VisualizationCallback(
+    # Create visualization integration
+    callback, compute_metrics = create_seq_viz_integration(
         output_file="shakespeare_training.jsonl",
-        max_sequences_per_eval=4,
         tokenizer=tokenizer,
+        max_sequences_per_eval=4,
+        model_name=model_name
     )
     
     # Create trainer
@@ -164,7 +165,8 @@ def main():
             tokenizer=tokenizer,
             mlm=False,
         ),
-        callbacks=[viz_callback],
+        callbacks=[callback],
+        compute_metrics=compute_metrics,
     )
     
     # Start training

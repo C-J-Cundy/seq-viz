@@ -81,58 +81,38 @@ open seq_viz/web/enhanced_dashboard.html
 
 ## HuggingFace Integration
 
-The visualization system now includes a callback for seamless integration with HuggingFace Trainers:
-
-### Using with SFTTrainer
+The visualization system integrates seamlessly with HuggingFace Trainers using the `create_seq_viz_integration` function:
 
 ```python
-from transformers import TrainingArguments
-from trl import SFTTrainer
-from seq_viz.integrations import VisualizationCallback
+from transformers import Trainer, TrainingArguments
+from seq_viz.integrations import create_seq_viz_integration
 
-# Create visualization callback
-viz_callback = VisualizationCallback(
+# Create integration components
+callback, compute_metrics = create_seq_viz_integration(
     output_file="training_viz.jsonl",
+    tokenizer=tokenizer,
+    existing_compute_metrics=your_metrics_fn,  # Optional - preserves existing metrics
     max_sequences_per_eval=4
 )
 
-# Add to trainer
-trainer = SFTTrainer(
-    model=model,
-    args=training_args,
-    train_dataset=train_dataset,
-    eval_dataset=eval_dataset,
-    tokenizer=tokenizer,
-    callbacks=[viz_callback]  # Just add the callback!
-)
-
-trainer.train()
-```
-
-### Using with Standard Trainer
-
-```python
-from transformers import Trainer
-from seq_viz.integrations import VisualizationCallback
-
-# Create callback
-viz_callback = VisualizationCallback("training_viz.jsonl")
-
-# Add to any Trainer
+# Use with any Trainer variant (Trainer, SFTTrainer, etc.)
 trainer = Trainer(
     model=model,
     args=training_args,
     train_dataset=train_dataset,
     eval_dataset=eval_dataset,
-    callbacks=[viz_callback]
+    callbacks=[callback],  # Lightweight state tracking
+    compute_metrics=compute_metrics  # Captures predictions
 )
+
+trainer.train()
 ```
 
-The callback automatically:
-- Wraps your existing `compute_metrics` function (if any)
-- Captures model predictions during evaluation
-- Saves visualization data in real-time
-- Works with any HuggingFace Trainer variant
+This integration:
+- Captures predictions that Trainer has already computed during evaluation
+- Preserves any existing compute_metrics function you may have
+- Adds minimal overhead to training
+- Works with SFTTrainer, Trainer, and all other Trainer variants
 
 ## Architecture
 
