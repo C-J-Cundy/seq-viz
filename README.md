@@ -281,8 +281,7 @@ seq-viz/
 │   │   └── file_visualization_server.py # File monitoring server
 │   └── web/                    # Web visualization files
 │       ├── dashboard.html              # Main visualization interface
-│       ├── dashboard.js                # Dashboard logic
-│       └── simple_dashboard.html       # Simple dashboard
+│       └── dashboard.js                # Dashboard logic
 ├── tests/                      # Test files
 │   ├── test_tensor_conversion.py
 │   ├── test_file_server.py
