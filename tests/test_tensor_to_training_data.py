@@ -192,7 +192,7 @@ def test_entropy_calculation(mock_tokenizer):
     
     # Check that probabilities sum to approximately 1
     total_prob = sum(p["prob"] for p in pred["top_20"])
-    assert total_prob <= 1.01  # Allow small numerical error
+    assert pytest.approx(total_prob, rel=0.01) == 1.0  # Should sum to 1.0
 
 
 def test_sequence_index_extraction(mock_tokenizer):
