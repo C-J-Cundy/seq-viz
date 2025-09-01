@@ -16,10 +16,10 @@ shakespeare_lora_output/
 *_output/
 *_model/
 
-# Test files
-test_*.py
-test_*.html
-test_*.jsonl
+# Test files in root directory only
+/test_*.py
+/test_*.html
+/test_*.jsonl
 
 # Performance and debugging files
 PERFORMANCE_IMPROVEMENTS.md
