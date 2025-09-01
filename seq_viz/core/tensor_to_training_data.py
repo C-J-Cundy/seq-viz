@@ -13,7 +13,8 @@ def tensor_to_training_entry(
     model_name: str,
     top_k: int = 5,
     top_20: int = 20,
-    sequence_idx: Optional[int] = None
+    sequence_idx: Optional[int] = None,
+    pad_token_id: Optional[int] = None
 ) -> Dict[str, Any]:
     """
     Convert model outputs to training data entry format.
@@ -28,10 +29,14 @@ def tensor_to_training_entry(
         top_k: Number of top predictions to include in top_k field
         top_20: Number of top predictions to include in top_20 field
         sequence_idx: If provided, only process this sequence from the batch
+        pad_token_id: Token ID used for padding (if None, will try to get from tokenizer)
     
     Returns:
         Dictionary matching the training data schema
     """
+    # Get pad_token_id if not provided
+    if pad_token_id is None and hasattr(tokenizer, 'pad_token_id'):
+        pad_token_id = tokenizer.pad_token_id
     # Handle both batched and single sequence inputs
     if logits.dim() == 2:
         logits = logits.unsqueeze(0)
@@ -54,14 +59,37 @@ def tensor_to_training_entry(
     for batch_idx in indices:
         # Get tokens and token IDs for this sequence
         token_ids_list = input_ids[batch_idx].tolist()
-        tokens = [tokenizer.decode(token_id, skip_special_tokens=False) 
-                  for token_id in token_ids_list]
+        
+        # Decode all tokens
+        tokens = []
+        for token_id in token_ids_list:
+            if token_id >= 0:
+                # Normal token - decode it
+                token_str = tokenizer.decode(token_id, skip_special_tokens=False)
+                tokens.append(token_str)
+            else:
+                # Negative value (typically -100) indicates this came from labels array
+                # where padding positions are marked for loss masking
+                # This happens when we couldn't get clean input_ids
+                tokens.append("[PAD]")
         
         # Process predictions for each position
         predictions = []
         
         # We predict the next token, so we look at positions 0 to seq_len-1
         for pos in range(seq_len - 1):
+            current_token_id = input_ids[batch_idx, pos].item()
+            next_token_id = input_ids[batch_idx, pos + 1].item()
+            
+            # Skip if we encounter negative values (from labels array when input_ids not available)
+            if current_token_id < 0 or next_token_id < 0:
+                continue
+            
+            # Skip if this is padding (when we have clean input_ids with actual pad_token_id)
+            if pad_token_id is not None:
+                if current_token_id == pad_token_id or next_token_id == pad_token_id:
+                    continue
+                
             # Get logits for this position
             pos_logits = logits[batch_idx, pos]
             
@@ -116,7 +144,7 @@ def tensor_to_training_entry(
         
         sequences.append({
             "tokens": tokens,
-            "token_ids": token_ids_list,
+            "token_ids": token_ids_list,  # Keep actual token IDs, no filtering
             "predictions": predictions
         })
     

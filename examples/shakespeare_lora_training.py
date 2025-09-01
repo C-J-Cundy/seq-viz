@@ -14,8 +14,8 @@ import requests
 import torch
 from datasets import Dataset
 from peft import LoraConfig, TaskType, get_peft_model
-# Import our visualization callback
-from seq_viz.integrations import VisualizationCallback
+# Import our visualization integration
+from seq_viz.integrations import create_seq_viz_integration
 from transformers import (AutoModelForCausalLM, AutoTokenizer,
                           DataCollatorForLanguageModeling, Trainer,
                           TrainingArguments)
@@ -137,7 +137,12 @@ def main():
         r=16,  # Rank
         lora_alpha=32,
         lora_dropout=0.1,
-        target_modules=["q_proj", "v_proj", "k_proj", "o_proj"],  # Target attention layers
+        target_modules=[
+            "q_proj",
+            "v_proj",
+            "k_proj",
+            "o_proj",
+        ],  # Target attention layers
     )
 
     # Apply LoRA
@@ -145,7 +150,9 @@ def main():
     model.print_trainable_parameters()
 
     # Prepare datasets
-    train_dataset, eval_dataset = prepare_dataset(shakespeare_path, tokenizer, block_size=256)
+    train_dataset, eval_dataset = prepare_dataset(
+        shakespeare_path, tokenizer, block_size=256
+    )
     print(f"Train samples: {len(train_dataset)}, Eval samples: {len(eval_dataset)}")
 
     # Training arguments - adjusted for LoRA
@@ -171,14 +178,15 @@ def main():
         # bf16=True,
     )
 
-    # Create visualization callback
-    viz_callback = VisualizationCallback(
+    # Create visualization integration
+    callback, compute_metrics = create_seq_viz_integration(
         output_file="shakespeare_lora_training.jsonl",
-        max_sequences_per_eval=4,
         tokenizer=tokenizer,
+        max_sequences_per_eval=4,
+        model_name=model_name
     )
 
-    # Create trainer
+    # Create trainer with visualization
     trainer = Trainer(
         model=model,
         args=training_args,
@@ -189,7 +197,8 @@ def main():
             tokenizer=tokenizer,
             mlm=False,
         ),
-        callbacks=[viz_callback],
+        callbacks=[callback],
+        compute_metrics=compute_metrics,
     )
 
     # Start training
@@ -197,7 +206,9 @@ def main():
     print("Starting Shakespeare LoRA fine-tuning with visualization!")
     print("=" * 50)
     print("\nTo view the visualization:")
-    print("1. In another terminal: python run_server.py --file shakespeare_lora_training.jsonl")
+    print(
+        "1. In another terminal: python run_server.py --file shakespeare_lora_training.jsonl"
+    )
     print("2. Open seq_viz/web/enhanced_dashboard.html in your browser")
     print("\nTraining will start in a moment...\n")
 
