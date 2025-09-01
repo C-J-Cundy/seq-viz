@@ -1359,7 +1359,7 @@ class HexagonReactor {
     
     // Create a hexagon for a sequence
     createHexagon(sequence, index) {
-        const radius = 140 - (index * 35); // Bigger with more spacing between hexagons
+        const radius = 160 - (index * 45); // Bigger with more spacing between hexagons
         const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         group.setAttribute('class', `hexagon-group hexagon-${index}`);
         
