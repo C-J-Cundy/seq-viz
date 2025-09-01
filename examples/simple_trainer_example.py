@@ -126,7 +126,7 @@ def main():
     print(f"Visualization data will be saved to: trainer_viz.jsonl")
     print("\nTo view the visualization:")
     print("1. In another terminal: python run_server.py --file trainer_viz.jsonl")
-    print("2. Open seq_viz/web/enhanced_dashboard.html in your browser")
+    print("2. Open seq_viz/web/dashboard.html in your browser")
     print("-" * 50)
     
     trainer.train()

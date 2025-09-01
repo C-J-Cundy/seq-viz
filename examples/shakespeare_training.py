@@ -175,7 +175,7 @@ def main():
     print("="*50)
     print("\nTo view the visualization:")
     print("1. In another terminal: python run_server.py --file shakespeare_training.jsonl")
-    print("2. Open seq_viz/web/enhanced_dashboard.html in your browser")
+    print("2. Open seq_viz/web/dashboard.html in your browser")
     print("\nTraining will start in a moment...\n")
     
     # Train

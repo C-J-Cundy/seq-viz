@@ -51,7 +51,7 @@ python run_server.py --file shakespeare_training.jsonl
 
 2. Open the dashboard in your browser:
 ```bash
-open seq_viz/web/enhanced_dashboard.html
+open seq_viz/web/dashboard.html
 ```
 
 ## What to Look For

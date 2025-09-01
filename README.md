@@ -76,7 +76,7 @@ python run_server.py --file training_data.jsonl
 ### 3. Open Dashboard
 
 ```bash
-open seq_viz/web/enhanced_dashboard.html
+open seq_viz/web/dashboard.html
 ```
 
 ## HuggingFace Integration
@@ -167,7 +167,7 @@ Training data is stored in JSONL format with the following structure:
 - Streams updates to connected clients
 - Configurable update intervals
 
-#### 5. Enhanced Dashboard (`enhanced_dashboard.html/js`)
+#### 5. Dashboard (`dashboard.html/js`)
 - Interactive token visualization
 - Probability distribution charts
 - Real-time metric graphs
@@ -260,7 +260,7 @@ python test_file_server.py
 ### Adding New Features
 
 1. **New Data Fields**: Update `training_data_schema.json`
-2. **New Visualizations**: Modify `enhanced_dashboard.js`
+2. **New Visualizations**: Modify `dashboard.js`
 3. **New Processing**: Extend `tensor_to_training_data.py`
 
 ### File Structure
@@ -280,8 +280,8 @@ seq-viz/
 │   │   ├── __init__.py
 │   │   └── file_visualization_server.py # File monitoring server
 │   └── web/                    # Web visualization files
-│       ├── enhanced_dashboard.html     # Main visualization interface
-│       ├── enhanced_dashboard.js       # Dashboard logic
+│       ├── dashboard.html              # Main visualization interface
+│       ├── dashboard.js                # Dashboard logic
 │       └── simple_dashboard.html       # Simple dashboard
 ├── tests/                      # Test files
 │   ├── test_tensor_conversion.py

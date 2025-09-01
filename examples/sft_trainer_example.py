@@ -92,7 +92,7 @@ def main():
     print(f"Visualization data will be saved to: sft_training_viz.jsonl")
     print("Run the visualization server in another terminal:")
     print("  python run_server.py --file sft_training_viz.jsonl")
-    print("Then open seq_viz/web/enhanced_dashboard.html in your browser")
+    print("Then open seq_viz/web/dashboard.html in your browser")
     
     trainer.train()
     
