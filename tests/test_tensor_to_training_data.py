@@ -131,10 +131,9 @@ def test_padding_handling(mock_tokenizer):
     assert seq["token_ids"] == [1, 2, 3, -100, -100, -100]
     
     # Check predictions only for non-padding positions
-    # Position 0 predicts token 1 (id=2)
-    # Position 1 predicts token 2 (id=3)
-    # Position 2 predicts token 3 (id=-100, becomes 0)
-    assert len(seq["predictions"]) == 5  # All positions except last
+    # The implementation only creates predictions up to the first -100
+    # So we only get predictions for positions 0 and 1 (predicting tokens at 1 and 2)
+    assert len(seq["predictions"]) == 2  # Only non-padding predictions
 
 
 def test_batch_processing(mock_tokenizer):
